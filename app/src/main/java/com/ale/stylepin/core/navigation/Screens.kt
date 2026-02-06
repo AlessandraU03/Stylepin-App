@@ -7,3 +7,7 @@ object LoginRoute
 
 @Serializable
 object PinsRoute
+
+@Serializable
+object AddPinRoute
+
