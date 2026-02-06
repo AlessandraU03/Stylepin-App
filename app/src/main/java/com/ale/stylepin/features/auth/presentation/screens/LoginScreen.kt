@@ -14,7 +14,8 @@ import com.ale.stylepin.features.auth.presentation.viewmodels.LoginViewModel
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onNavigateToRegister: () -> Unit // Adaptado para permitir navegación al registro
 ) {
     var identity by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -35,7 +36,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Corrección imagen image_7310a0.png: Acceso directo a la propiedad
         if (uiState.isLoading) {
             CircularProgressIndicator()
         } else {
@@ -46,16 +46,22 @@ fun LoginScreen(
             ) {
                 Text("Iniciar Sesión")
             }
+
+            // Botón para ir a la pantalla de registro
+            TextButton(
+                onClick = onNavigateToRegister,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text("¿No tienes cuenta? Regístrate aquí")
+            }
         }
 
-        // Corrección imagen image_730940.jpg: Observar el booleano de éxito
         LaunchedEffect(uiState.isLoginSuccess) {
             if (uiState.isLoginSuccess) {
                 onLoginSuccess()
             }
         }
 
-        // Corrección error: Mostrar mensaje si existe
         uiState.error?.let { msg ->
             Text(text = msg, color = Color.Red, modifier = Modifier.padding(top = 16.dp))
         }

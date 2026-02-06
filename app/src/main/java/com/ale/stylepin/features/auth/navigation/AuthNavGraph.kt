@@ -7,9 +7,12 @@ import androidx.navigation.compose.composable
 import com.ale.stylepin.core.navigation.FeatureNavGraph
 import com.ale.stylepin.core.navigation.LoginRoute
 import com.ale.stylepin.core.navigation.PinsRoute
+import com.ale.stylepin.core.navigation.RegisterRoute
 import com.ale.stylepin.features.auth.di.AuthModule
 import com.ale.stylepin.features.auth.presentation.screens.LoginScreen
+import com.ale.stylepin.features.auth.presentation.screens.RegisterScreen
 import com.ale.stylepin.features.auth.presentation.viewmodels.LoginViewModel
+import com.ale.stylepin.features.auth.presentation.viewmodels.RegisterViewModel
 
 class AuthNavGraph(
     private val authModule: AuthModule
@@ -25,6 +28,25 @@ class AuthNavGraph(
                 viewModel = viewModel,
                 onLoginSuccess = {
                     navController.navigate(PinsRoute)
+                },
+                onNavigateToRegister = {
+                    navController.navigate(RegisterRoute) // Navega al registro
+                }
+            )
+        }
+
+        navGraphBuilder.composable<RegisterRoute> {
+            val viewModel: RegisterViewModel = viewModel(
+                factory = authModule.provideRegisterViewModelFactory()
+            )
+
+            RegisterScreen(
+                viewModel = viewModel,
+                onRegisterSuccess = {
+                    navController.navigate(PinsRoute)
+                },
+                onNavigateToLogin = {
+                    navController.popBackStack()
                 }
             )
         }
