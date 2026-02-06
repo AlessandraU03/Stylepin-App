@@ -21,6 +21,7 @@ import com.ale.stylepin.features.pins.presentation.viewmodels.AddPinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPinScreen(viewModel: AddPinViewModel, onBack: () -> Unit) {
+
     Scaffold(
         topBar = { TopAppBar(title = { Text("Nuevo Pin") }) }
     ) { padding ->
@@ -38,7 +39,7 @@ fun AddPinScreen(viewModel: AddPinViewModel, onBack: () -> Unit) {
                 label = { Text("URL de la Imagen") },
                 modifier = Modifier.fillMaxWidth()
             )
-            // Aquí podrías agregar Dropdowns para Temporada y Categoría basados en tu API
+
 
             Button(
                 onClick = { viewModel.savePin { onBack() } },

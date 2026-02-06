@@ -16,20 +16,15 @@ import java.util.concurrent.TimeUnit
 
 class AppContainer(context: Context) {
 
-    // 1. Acceso al almacenamiento persistente
+
     private val sharedPreferences = context.getSharedPreferences("stylepin_prefs", Context.MODE_PRIVATE)
 
-    // 2. Cliente de OkHttp con el interceptor de seguridad
-
-    // 2. Cliente de OkHttp con el interceptor de seguridad
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(AuthInterceptor {
-            // Esto leerá el token que guardó el AuthRepositoryImpl al hacer login
             sharedPreferences.getString("auth_token", null)
         })
         .build()
 
-    // 3. Generación de Retrofit inyectando el cliente
     private fun createRetrofit(baseUrl: String): Retrofit {
         // Interceptor para ver las peticiones HTTP
         val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -46,7 +41,7 @@ class AppContainer(context: Context) {
         return Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(client)
-            .client(okHttpClient) // <--- Crucial para evitar el 403 Forbidden
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
@@ -57,10 +52,8 @@ class AppContainer(context: Context) {
         stylePinRetrofit.create(StylePinApi::class.java)
     }
 
-    // --- CORRECCIÓN AQUÍ ---
     val authRepository: AuthRepository by lazy {
-        // Ahora le pasamos sharedPreferences para que pueda GUARDAR el token
-        AuthRepositoryImpl(stylePinApi, sharedPreferences)
+       AuthRepositoryImpl(stylePinApi, sharedPreferences)
     }
 
     val pinsRepository: PinsRepository by lazy {

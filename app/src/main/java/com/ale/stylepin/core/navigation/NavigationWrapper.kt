@@ -12,8 +12,7 @@ fun NavigationWrapper(navGraphs: List<FeatureNavGraph>) {
         navController = navController,
         startDestination = LoginRoute
     ) {
-        // Registramos todos los grafos de la lista
-        navGraphs.forEach { graph ->
+         navGraphs.forEach { graph ->
             graph.registerGraph(this, navController)
         }
     }

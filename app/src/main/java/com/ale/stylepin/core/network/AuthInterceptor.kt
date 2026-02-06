@@ -9,7 +9,7 @@ class AuthInterceptor(private val tokenProvider: () -> String?) : Interceptor {
         val requestBuilder = chain.request().newBuilder()
 
         if (!token.isNullOrBlank()) {
-            // TU API USA HTTPBearer(), por lo que "Bearer " ES OBLIGATORIO
+
             requestBuilder.addHeader("Authorization", "Bearer $token")
         }
 

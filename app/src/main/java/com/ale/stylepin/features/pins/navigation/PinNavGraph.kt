@@ -6,7 +6,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import com.ale.stylepin.core.navigation.FeatureNavGraph
 import com.ale.stylepin.core.navigation.PinsRoute
-import com.ale.stylepin.core.navigation.AddPinRoute // Asegúrate de tener esta ruta definida
+import com.ale.stylepin.core.navigation.AddPinRoute
 import com.ale.stylepin.features.pins.di.PinModule
 import com.ale.stylepin.features.pins.presentation.screens.PinsScreen
 import com.ale.stylepin.features.pins.presentation.screens.AddPinScreen
@@ -16,7 +16,7 @@ import com.ale.stylepin.features.pins.presentation.viewmodels.AddPinViewModel
 class PinsNavGraph(private val pinsModule: PinModule) : FeatureNavGraph {
     override fun registerGraph(navGraphBuilder: NavGraphBuilder, navController: NavHostController) {
 
-        // 1. Pantalla del Feed Principal
+
         navGraphBuilder.composable<PinsRoute> {
             val viewModel: PinsViewModel = viewModel(
                 factory = pinsModule.providePinsViewModelFactory()

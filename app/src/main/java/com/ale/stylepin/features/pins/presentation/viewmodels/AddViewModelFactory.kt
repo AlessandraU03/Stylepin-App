@@ -10,7 +10,6 @@ class AddPinViewModelFactory(
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        // Verificamos que la clase que se intenta crear sea AddPinViewModel
         if (modelClass.isAssignableFrom(AddPinViewModel::class.java)) {
             return AddPinViewModel(addPinsUseCase) as T
         }

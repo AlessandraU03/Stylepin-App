@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle // Importación necesaria
 import com.ale.stylepin.features.pins.presentation.components.SeasonFilterRow
 import com.ale.stylepin.features.pins.presentation.components.PinCard
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
@@ -24,12 +25,13 @@ fun PinsScreen(
     viewModel: PinsViewModel,
     onNavigateToAddPin: () -> Unit
 ) {
-    val uiState = viewModel.uiState
+    // 1. Recolección reactiva del estado del StateFlow
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Estado local para controlar qué Pin se quiere borrar y mostrar el diálogo
+    // Estado local para el diálogo de confirmación (sigue siendo de la UI)
     var pinIdToDelete by remember { mutableStateOf<String?>(null) }
 
-    // --- DIÁLOGO DE CONFIRMACIÓN ---
+    // Diálogo de eliminación
     if (pinIdToDelete != null) {
         AlertDialog(
             onDismissRequest = { pinIdToDelete = null },
@@ -38,9 +40,7 @@ fun PinsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        pinIdToDelete?.let { id ->
-                            viewModel.deletePin(id)
-                        }
+                        pinIdToDelete?.let { id -> viewModel.deletePin(id) }
                         pinIdToDelete = null
                     }
                 ) {
@@ -55,7 +55,7 @@ fun PinsScreen(
         )
     }
 
-    // Configuración del Pull to Refresh (conecta con fetchPins de EC2)
+    // Configuración del Pull to Refresh ligada al uiState.isLoading
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isLoading,
         onRefresh = { viewModel.fetchPins() }
@@ -63,20 +63,12 @@ fun PinsScreen(
 
     Scaffold(
         topBar = {
-            Column {
-                TopAppBar(
-                    title = { Text("StylePin Seasons") },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+            TopAppBar(
+                title = { Text("StylePin Seasons") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
-                SeasonFilterRow(
-                    selectedSeason = uiState.selectedSeason,
-                    onSeasonSelected = { season ->
-                        viewModel.filterBySeason(season)
-                    }
-                )
-            }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -97,15 +89,15 @@ fun PinsScreen(
                 .fillMaxSize()
                 .pullRefresh(pullRefreshState)
         ) {
-            // Mostrar error si la API de Python devuelve un fallo (ej: 401 o 403)
-            uiState.error?.let {
+            // Muestra de errores dinámicos
+            uiState.error?.let { msg ->
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
                     modifier = Modifier.fillMaxWidth().padding(8.dp),
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
-                        text = it,
+                        text = msg,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.bodyMedium
@@ -113,29 +105,27 @@ fun PinsScreen(
                 }
             }
 
-            // Grid de Pines
+            // Grilla de Pins
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(8.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
+                // Usamos uiState.filteredPins que viene procesado del ViewModel
                 items(uiState.filteredPins, key = { it.id }) { pin ->
                     PinCard(
                         pin = pin,
-                        onDeleteClick = { id ->
-                            // Al hacer clic, guardamos el ID para mostrar el diálogo
-                            pinIdToDelete = id
-                        }
+                        onDeleteClick = { id -> pinIdToDelete = id }
                     )
                 }
             }
 
-            // Carga central inicial
+            // Loader central solo si la lista está vacía
             if (uiState.isLoading && uiState.pins.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
 
-            // Indicador visual de actualización (PullRefresh)
+            // Indicador visual de PullRefresh
             PullRefreshIndicator(
                 refreshing = uiState.isLoading,
                 state = pullRefreshState,

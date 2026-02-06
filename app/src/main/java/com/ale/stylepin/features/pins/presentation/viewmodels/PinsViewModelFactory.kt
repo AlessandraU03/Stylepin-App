@@ -7,12 +7,11 @@ import com.ale.stylepin.features.pins.domain.usecases.DeletePinsUseCase // Impor
 
 class PinsViewModelFactory(
     private val getPinsUseCase: GetPinsUseCase,
-    private val deletePinUseCase: DeletePinsUseCase // Añadimos la dependencia aquí
+    private val deletePinUseCase: DeletePinsUseCase
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PinsViewModel::class.java)) {
-            // Pasamos ambas dependencias al constructor del ViewModel
             return PinsViewModel(getPinsUseCase, deletePinUseCase) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
