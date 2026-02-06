@@ -19,10 +19,11 @@ class AppContainer(context: Context) {
 
     // 2. Cliente de OkHttp con el interceptor de seguridad
 
+    // 2. Cliente de OkHttp con el interceptor de seguridad
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(AuthInterceptor {
-            // PEGA AQUÍ UN TOKEN QUE COPIES DIRECTO DE TU SWAGGER
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMmM4ZWM0OC1kMTkzLTQ0NDYtYjgxNC02NTQ3MGI4NjA1ZjIiLCJyb2xlIjoidXNlciIsImV4cCI6MTc3MDk4NDYxNCwiaWF0IjoxNzcwMzc5ODE0fQ.PNyunNGElUfQfH9wZpeWp1jKcC9pil9r7Dig6zl0kmk"
+            // Esto leerá el token que guardó el AuthRepositoryImpl al hacer login
+            sharedPreferences.getString("auth_token", null)
         })
         .build()
 
