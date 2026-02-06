@@ -10,3 +10,7 @@ object RegisterRoute
 
 @Serializable
 object PinsRoute
+
+@Serializable
+object AddPinRoute
+
