@@ -5,52 +5,73 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ale.stylepin.features.pins.domain.usecases.DeletePinsUseCase
 import com.ale.stylepin.features.pins.domain.usecases.GetPinsUseCase
-import com.ale.stylepin.features.pins.presentation.screens.PinsUiState
+import com.ale.stylepin.features.pins.domain.usecases.DeletePinsUseCase
+import com.ale.stylepin.features.pins.domain.entities.Pin
 import kotlinx.coroutines.launch
 
-class PinsViewModel(private val getPinsUseCase: GetPinsUseCase,private val deletePinUseCase: DeletePinsUseCase) : ViewModel() {
+// Estado de la UI
+data class PinsUiState(
+    val pins: List<Pin> = emptyList(),          // Todos los pines de EC2
+    val filteredPins: List<Pin> = emptyList(),  // Los que realmente se ven
+    val selectedSeason: String = "All",         // Temporada activa
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
+
+class PinsViewModel(
+    private val getPinsUseCase: GetPinsUseCase,
+    private val deletePinUseCase: DeletePinsUseCase
+) : ViewModel() {
+
     var uiState by mutableStateOf(PinsUiState())
         private set
 
-    init { fetchPins() }
+    init {
+        fetchPins()
+    }
 
     fun fetchPins() {
         viewModelScope.launch {
             uiState = uiState.copy(isLoading = true)
             try {
-                val pins = getPinsUseCase.execute()
-                uiState = uiState.copy(isLoading = false, pins = pins, filteredPins = pins)
+                val result = getPinsUseCase.execute()
+                uiState = uiState.copy(
+                    pins = result,
+                    // Al cargar, aplicamos el filtro actual (por si estaba en 'Winter')
+                    filteredPins = applyFilter(result, uiState.selectedSeason),
+                    isLoading = false,
+                    error = null
+                )
             } catch (e: Exception) {
                 uiState = uiState.copy(isLoading = false, error = e.message)
             }
         }
     }
 
+    // --- ESTA ES LA FUNCIÓN QUE LLAMAN LOS BOTONES ---
     fun filterBySeason(season: String) {
-        val filtered = if (season == "todo_el_ano") {
-            uiState.pins
+        uiState = uiState.copy(
+            selectedSeason = season,
+            filteredPins = applyFilter(uiState.pins, season)
+        )
+    }
+
+    // Lógica interna de filtrado
+    private fun applyFilter(list: List<Pin>, season: String): List<Pin> {
+        return if (season == "All") {
+            list
         } else {
-            uiState.pins.filter { pin ->
-                // Comparación directa de Strings (case-insensitive por seguridad)
-                pin.season.equals(season, ignoreCase = true)
-            }
+            // Comparamos el campo 'season' del Pin con el botón presionado
+            list.filter { it.season.equals(season, ignoreCase = true) }
         }
-        uiState = uiState.copy(filteredPins = filtered, selectedSeason = season)
     }
 
     fun deletePin(pinId: String) {
         viewModelScope.launch {
-            // Opcional: Podrías añadir un estado 'isDeleting' si quieres bloquear la UI
             val success = deletePinUseCase.execute(pinId)
-
             if (success) {
-                // Si EC2 confirma el borrado (204), refrescamos la lista localmente
-                fetchPins()
-            } else {
-                // Manejo de error (ej: el usuario no tiene permisos/403)
-                uiState = uiState.copy(error = "No se pudo eliminar el pin. Verifica tus permisos.")
+                fetchPins() // Recargamos de EC2 tras borrar
             }
         }
     }
