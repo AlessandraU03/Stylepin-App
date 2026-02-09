@@ -1,6 +1,5 @@
 package com.ale.stylepin.features.auth.presentation.viewmodels
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.features.auth.domain.usecases.RegisterUseCase
@@ -15,46 +14,41 @@ class RegisterViewModel(private val registerUseCase: RegisterUseCase) : ViewMode
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState = _uiState.asStateFlow()
 
-    fun register(username: String, email: String, pass: String, fullName: String, gender: String) {
-        Log.d(
-            "RegisterViewModel",
-            "register() called with: username=$username, email=$email, fullName=$fullName, gender=$gender"
-        )
+    // Funciones para actualizar el estado (Events enviados desde la UI)
+    fun onFullNameChanged(value: String) = _uiState.update { it.copy(fullName = value) }
+    fun onUsernameChanged(value: String) = _uiState.update { it.copy(username = value) }
+    fun onEmailChanged(value: String) = _uiState.update { it.copy(email = value) }
+    fun onPasswordChanged(value: String) = _uiState.update { it.copy(password = value) }
+    fun onGenderChanged(value: String) = _uiState.update { it.copy(gender = value) }
+
+    fun register() {
+        val state = _uiState.value
 
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(isLoading = true, error = null, isLoginSuccess = false)
-            }
-            Log.d("RegisterViewModel", "Estado cambiado a loading")
+            _uiState.update { it.copy(isLoading = true, error = null, isLoginSuccess = false) }
 
             try {
-                val result = registerUseCase.execute(username, email, pass, fullName, gender)
-                Log.d("RegisterViewModel", "Registro exitoso: token=${result.token}")
+                // Aquí usamos los datos que ya están en el StateFlow
+                val result = registerUseCase.execute(
+                    state.username,
+                    state.email,
+                    state.password,
+                    state.fullName,
+                    state.gender
+                )
 
-                // Éxito: Actualizamos con el token y marcamos éxito
                 _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        token = result.token,
-                        isLoginSuccess = true
-                    )
+                    it.copy(isLoading = false, token = result.token, isLoginSuccess = true)
                 }
             } catch (e: Exception) {
-                Log.e("RegisterViewModel", "Error en registro", e)
-
-                // Error: Capturamos la excepción y actualizamos el estado
                 _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = e.message ?: "Error en el registro",
-                        isLoginSuccess = false
-                    )
+                    it.copy(isLoading = false, error = e.message ?: "Error desconocido", isLoginSuccess = false)
                 }
             }
         }
     }
 
-   fun consumeError() {
+    fun consumeError() {
         _uiState.update { it.copy(error = null) }
     }
 }

@@ -13,6 +13,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState // Importante importar esto
+import androidx.compose.runtime.getValue        // Importante importar esto
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -22,32 +24,52 @@ import com.ale.stylepin.features.pins.presentation.viewmodels.AddPinViewModel
 @Composable
 fun AddPinScreen(viewModel: AddPinViewModel, onBack: () -> Unit) {
 
+    val uiState by viewModel.uiState.collectAsState()
+
     Scaffold(
         topBar = { TopAppBar(title = { Text("Nuevo Pin") }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(16.dp)) {
+
+            // 2. TÍTULO
             OutlinedTextField(
-                value = viewModel.title,
-                onValueChange = { viewModel.title = it },
+                value = uiState.title, // Leemos del State
+                onValueChange = { viewModel.onTitleChange(it) }, // Usamos la función del VM
                 label = { Text("Título del Outfit") },
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(Modifier.height(8.dp))
+
+            // 3. IMAGEN
             OutlinedTextField(
-                value = viewModel.imageUrl,
-                onValueChange = { viewModel.imageUrl = it },
+                value = uiState.imageUrl, // Leemos del State
+                onValueChange = { viewModel.onImageUrlChange(it) }, // Usamos la función del VM
                 label = { Text("URL de la Imagen") },
                 modifier = Modifier.fillMaxWidth()
             )
 
-
+            // 4. BOTÓN
             Button(
                 onClick = { viewModel.savePin { onBack() } },
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                enabled = !viewModel.isSaving && viewModel.title.isNotBlank()
+                // Usamos isLoading (que viene de PinsUiState) en lugar de isSaving
+                enabled = !uiState.isLoading && uiState.title.isNotBlank()
             ) {
-                if (viewModel.isSaving) CircularProgressIndicator(color = Color.White)
-                else Text("Publicar Pin")
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(color = Color.White)
+                } else {
+                    Text("Publicar Pin")
+                }
+            }
+
+            // Opcional: Mostrar error si existe
+            if (uiState.error != null) {
+                Text(
+                    text = uiState.error ?: "",
+                    color = Color.Red,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     }

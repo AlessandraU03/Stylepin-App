@@ -14,16 +14,24 @@ class LoginViewModel(private val loginUseCase: LoginUseCase) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState = _uiState.asStateFlow()
 
-    fun login(identity: String, pass: String) {
+    // Manejo de eventos de entrada (Igual que en Register)
+    fun onIdentityChanged(value: String) {
+        _uiState.update { it.copy(username = value, error = null) }
+    }
+
+    fun onPasswordChanged(value: String) {
+        _uiState.update { it.copy(password = value, error = null) }
+    }
+
+    fun login() {
+        val currentState = _uiState.value
+
         viewModelScope.launch {
-            // 1. Actualización atómica para iniciar carga
-            _uiState.update {
-                it.copy(isLoading = true, error = null, isLoginSuccess = false)
-            }
+            _uiState.update { it.copy(isLoading = true, error = null, isLoginSuccess = false) }
 
             try {
-                val result = loginUseCase.execute(identity, pass)
-
+                // Usamos los datos guardados en el estado
+                val result = loginUseCase.execute(currentState.username, currentState.password)
 
                 _uiState.update {
                     it.copy(
@@ -33,20 +41,14 @@ class LoginViewModel(private val loginUseCase: LoginUseCase) : ViewModel() {
                     )
                 }
             } catch (e: Exception) {
-
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = e.message ?: "Error desconocido",
+                        error = e.message ?: "Credenciales inválidas",
                         isLoginSuccess = false
                     )
                 }
             }
         }
-    }
-
-    // Función extra útil: Resetear el error al volver a escribir
-    fun clearError() {
-        _uiState.update { it.copy(error = null) }
     }
 }

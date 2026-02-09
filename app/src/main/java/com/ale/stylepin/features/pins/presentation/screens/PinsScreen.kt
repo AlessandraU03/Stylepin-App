@@ -25,10 +25,8 @@ fun PinsScreen(
     viewModel: PinsViewModel,
     onNavigateToAddPin: () -> Unit
 ) {
-    // 1. Recolección reactiva del estado del StateFlow
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Estado local para el diálogo de confirmación (sigue siendo de la UI)
     var pinIdToDelete by remember { mutableStateOf<String?>(null) }
 
     // Diálogo de eliminación

@@ -18,12 +18,6 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
-    // 1. Estados locales para los inputs (esto sigue igual, son de la vista)
-    var identity by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-
-    // 2. RECOLECCIÓN DEL ESTADO: Usamos collectAsStateWithLifecycle
-    // Esto requiere la dependencia: androidx.lifecycle:lifecycle-runtime-compose
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
@@ -39,53 +33,54 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        // Identidad (Username/Email) vinculado al ViewModel
         StylePinTextField(
-            value = identity,
-            onValueChange = { identity = it },
-            label = "Usuario"
+            value = uiState.username,
+            onValueChange = { viewModel.onIdentityChanged(it) },
+            label = "Usuario o Correo"
         )
+
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Password vinculado al ViewModel
         StylePinPasswordField(
-            value = password,
-            onValueChange = { password = it },
+            value = uiState.password,
+            onValueChange = { viewModel.onPasswordChanged(it) },
             label = "Contraseña"
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 3. Uso del estado recolectado (uiState)
         if (uiState.isLoading) {
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.login(identity, password) },
+                onClick = { viewModel.login() },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                enabled = identity.isNotEmpty() && password.isNotEmpty()
+                // Lógica de habilitación derivada directamente del estado
+                enabled = uiState.username.isNotEmpty() && uiState.password.isNotEmpty()
             ) {
                 Text("Iniciar Sesión")
             }
 
-            TextButton(
-                onClick = onNavigateToRegister,
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
+            TextButton(onClick = onNavigateToRegister) {
                 Text("¿No tienes cuenta? Regístrate aquí")
             }
         }
 
-        // 4. Efecto para navegación (reacciona al cambio en isLoginSuccess)
+        // Navegación reactiva
         LaunchedEffect(uiState.isLoginSuccess) {
             if (uiState.isLoginSuccess) {
                 onLoginSuccess()
             }
         }
 
-        // 5. Mostrar errores
+        // Errores centralizados
         uiState.error?.let { msg ->
             Text(
                 text = msg,
-                color = Color.Red,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 16.dp)
             )
         }

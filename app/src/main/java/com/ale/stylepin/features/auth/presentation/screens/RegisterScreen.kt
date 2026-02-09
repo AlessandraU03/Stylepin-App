@@ -9,7 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // Importación clave
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ale.stylepin.features.auth.presentation.components.StylePinPasswordField
 import com.ale.stylepin.features.auth.presentation.components.StylePinTextField
 import com.ale.stylepin.features.auth.presentation.viewmodels.RegisterViewModel
@@ -20,24 +20,17 @@ fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
-    // 1. Mantener estados locales para el formulario
-    var username by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var fullName by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("male") }
-
-    // 2. Recolectar el estado del ViewModel usando collectAsStateWithLifecycle
+    // Observamos el estado del StateFlow (Igual que en Rick y Morty)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
 
-    // Lógica de validación (Se mantiene en la UI por ser puramente visual)
-    val passwordHasUppercase = password.any { it.isUpperCase() }
-    val passwordValid = password.length >= 8 && passwordHasUppercase
-    val isFormValid = username.isNotBlank() &&
-            email.contains("@") &&
-            passwordValid &&
-            fullName.isNotBlank()
+    // Validaciones visuales (Derivadas del estado)
+    val passwordHasUppercase = uiState.password.any { it.isUpperCase() }
+    val isFormValid = uiState.username.isNotBlank() &&
+            uiState.email.contains("@") &&
+            uiState.password.length >= 8 &&
+            passwordHasUppercase &&
+            uiState.fullName.isNotBlank()
 
     Column(
         modifier = Modifier
@@ -47,35 +40,40 @@ fun RegisterScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "StylePin",
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
+        Text(text = "StylePin", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary)
         Text(text = "Crea tu cuenta", style = MaterialTheme.typography.titleMedium)
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- CAMPOS DE TEXTO ---
-        StylePinTextField(value = fullName, onValueChange = { fullName = it }, label = "Nombre Completo")
+        // CAMPOS CONECTADOS AL VIEWMODEL
+        StylePinTextField(
+            value = uiState.fullName,
+            onValueChange = { viewModel.onFullNameChanged(it) },
+            label = "Nombre Completo"
+        )
         Spacer(modifier = Modifier.height(16.dp))
 
-        StylePinTextField(value = username, onValueChange = { username = it }, label = "Nombre de usuario")
+        StylePinTextField(
+            value = uiState.username,
+            onValueChange = { viewModel.onUsernameChanged(it) },
+            label = "Nombre de usuario"
+        )
         Spacer(modifier = Modifier.height(16.dp))
 
-        StylePinTextField(value = email, onValueChange = { email = it }, label = "Correo electrónico")
-        if (email.isNotEmpty() && !email.contains("@")) {
-            Text(text = "Email inválido", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-        }
+        StylePinTextField(
+            value = uiState.email,
+            onValueChange = { viewModel.onEmailChanged(it) },
+            label = "Correo electrónico"
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- SELECTOR DE GÉNERO ---
-        Text("Género:", style = MaterialTheme.typography.bodyMedium)
+        // SELECTOR DE GÉNERO
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             listOf("male" to "Hombre", "female" to "Mujer", "other" to "Otro").forEach { (value, label) ->
                 FilterChip(
-                    selected = gender == value,
-                    onClick = { gender = value },
+                    selected = uiState.gender == value,
+                    onClick = { viewModel.onGenderChanged(value) },
                     label = { Text(label) }
                 )
             }
@@ -83,32 +81,20 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        StylePinPasswordField(value = password, onValueChange = { password = it }, label = "Contraseña")
-
-        // --- VALIDACIÓN VISUAL ---
-        if (password.isNotEmpty()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                Text(
-                    text = if (password.length >= 8) "✓ Mínimo 8 caracteres" else "✗ Mínimo 8 caracteres",
-                    color = if (password.length >= 8) Color.Green else MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = if (passwordHasUppercase) "✓ Una letra mayúscula" else "✗ Una letra mayúscula",
-                    color = if (passwordHasUppercase) Color.Green else MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
+        StylePinPasswordField(
+            value = uiState.password,
+            onValueChange = { viewModel.onPasswordChanged(it) },
+            label = "Contraseña"
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 3. Reacción al estado de carga de uiState
+        // REACCIÓN AL ESTADO (Carga / Botón)
         if (uiState.isLoading) {
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.register(username, email, password, fullName, gender) },
+                onClick = { viewModel.register() },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 enabled = isFormValid
             ) {
@@ -120,21 +106,16 @@ fun RegisterScreen(
             }
         }
 
-        // 4. Navegación al éxito
+        // MANEJO DE ERRORES
+        uiState.error?.let { msg ->
+            Text(text = msg, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp))
+        }
+
+        // NAVEGACIÓN EXITOSA
         LaunchedEffect(uiState.isLoginSuccess) {
             if (uiState.isLoginSuccess) {
                 onRegisterSuccess()
             }
-        }
-
-        // 5. Manejo de errores desde el StateFlow
-        uiState.error?.let { msg ->
-            Text(
-                text = msg,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 16.dp),
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }

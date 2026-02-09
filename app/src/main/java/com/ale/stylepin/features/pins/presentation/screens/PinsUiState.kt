@@ -6,6 +6,9 @@ data class PinsUiState(
     val isLoading: Boolean = false,
     val pins: List<Pin> = emptyList(),
     val filteredPins: List<Pin> = emptyList(),
-    val selectedSeason: String = "todo_el_ano", // <--- AGREGA ESTO
-    val error: String? = null
+    val error: String? = null,
+    val title: String = "",
+    val imageUrl: String = "",
+    val selectedCategory: String = "outfit_completo",
+    val selectedSeason: String = "todo_el_ano"
 )
