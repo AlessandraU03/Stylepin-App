@@ -11,14 +11,13 @@ import retrofit2.HttpException
 
 class AuthRepositoryImpl(
     private val api: StylePinApi,
-    private val prefs: SharedPreferences // Ahora el constructor acepta ambos correctamente
+    private val prefs: SharedPreferences
 ) : AuthRepository {
 
     override suspend fun login(identity: String, pass: String): UserToken {
         try {
             val response = api.login(LoginRequest(identity, pass))
 
-            // ¡PASO CRUCIAL!: Guardar el token en el disco del celular
             prefs.edit().putString("auth_token", response.token).apply()
 
             return UserToken(
