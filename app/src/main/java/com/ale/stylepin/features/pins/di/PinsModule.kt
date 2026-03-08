@@ -8,6 +8,8 @@ import com.ale.stylepin.features.pins.domain.usecases.AddPinsUseCase
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModelFactory
 import com.ale.stylepin.features.pins.presentation.viewmodels.AddPinViewModelFactory
 import com.ale.stylepin.features.pins.domain.usecases.DeletePinsUseCase
+import com.ale.stylepin.features.pins.domain.usecases.UpdatePinsUseCase
+import com.ale.stylepin.features.pins.presentation.viewmodels.EditPinViewModelFactory
 
 class PinModule(private val appContainer: AppContainer) {
     // CORRECCIÓN: Añadimos el tipo : PinsRepository explícitamente
@@ -30,4 +32,8 @@ class PinModule(private val appContainer: AppContainer) {
 
     // Esta función es vital para el PinsNavGraph
     fun provideAddPinViewModelFactory() = AddPinViewModelFactory(addPinsUseCase)
+
+    private val updatePinsUseCase by lazy { UpdatePinsUseCase(pinsRepository) }
+
+    fun provideEditPinViewModelFactory() = EditPinViewModelFactory(updatePinsUseCase)
 }

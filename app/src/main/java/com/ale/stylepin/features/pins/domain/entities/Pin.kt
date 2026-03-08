@@ -8,5 +8,5 @@ data class Pin(
     val category: String,
     val occasions: List<String>,
     val likesCount: Int,
-    val season: String // <--- AGREGA ESTA LÍNEA
+    val season: String
 )

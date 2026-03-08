@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle // Importación necesaria
+import com.ale.stylepin.features.pins.domain.entities.Pin
 import com.ale.stylepin.features.pins.presentation.components.SeasonFilterRow
 import com.ale.stylepin.features.pins.presentation.components.PinCard
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
@@ -23,7 +24,8 @@ import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 @Composable
 fun PinsScreen(
     viewModel: PinsViewModel,
-    onNavigateToAddPin: () -> Unit
+    onNavigateToAddPin: () -> Unit,
+    onNavigateToEditPin: (Pin) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -113,7 +115,8 @@ fun PinsScreen(
                 items(uiState.filteredPins, key = { it.id }) { pin ->
                     PinCard(
                         pin = pin,
-                        onDeleteClick = { id -> pinIdToDelete = id }
+                        onDeleteClick = { id -> pinIdToDelete = id },
+                        onEditClick = { onNavigateToEditPin(pin) }
                     )
                 }
             }

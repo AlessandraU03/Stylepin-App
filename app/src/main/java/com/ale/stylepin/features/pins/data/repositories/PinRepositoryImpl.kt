@@ -4,6 +4,7 @@ import android.util.Log
 import com.ale.stylepin.core.network.StylePinApi
 import com.ale.stylepin.features.pins.data.datasources.remote.mapper.toDomain
 import com.ale.stylepin.features.pins.data.datasources.remote.model.AddPinRequest
+import com.ale.stylepin.features.pins.data.datasources.remote.model.UpdatePinRequest
 import com.ale.stylepin.features.pins.domain.entities.Pin
 import com.ale.stylepin.features.pins.domain.repository.PinsRepository
 
@@ -40,5 +41,18 @@ class PinRepositoryImpl(private val api: StylePinApi) : PinsRepository {
         }
     }
 
+    override suspend fun updatePin(pinId: String, title: String, imageUrl: String, category: String, season: String): Boolean {
+        return try {
+            val request = UpdatePinRequest(
+                title = title,
+                description = "",
+                category = category,
+                season = season
+            )
+            api.updatePin(pinId, request)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
 }
-

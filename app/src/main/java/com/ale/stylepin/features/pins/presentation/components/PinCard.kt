@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,7 +21,8 @@ import com.ale.stylepin.features.pins.domain.entities.Pin
 @Composable
 fun PinCard(
     pin: Pin,
-    onDeleteClick: (String) -> Unit // Añadimos el callback para el borrado
+    onDeleteClick: (String) -> Unit,
+    onEditClick: () -> Unit // <-- 1. Agregado el parámetro necesario
 ) {
     Card(
         modifier = Modifier
@@ -30,7 +32,6 @@ fun PinCard(
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column {
-            // Usamos Box para poder encimar el botón de eliminar sobre la imagen
             Box(modifier = Modifier.fillMaxWidth().height(220.dp)) {
                 AsyncImage(
                     model = pin.imageUrl,
@@ -39,28 +40,46 @@ fun PinCard(
                     contentScale = ContentScale.Crop
                 )
 
-                // BOTÓN DE ELIMINAR (Solo visible sobre la imagen)
-                IconButton(
-                    onClick = { onDeleteClick(pin.id) },
+                // 2. Fila de botones arriba a la derecha
+                Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(30.dp)
-                        .background(
-                            color = Color.Black.copy(alpha = 0.5f),
-                            shape = CircleShape
-                        )
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Eliminar",
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    // BOTÓN EDITAR
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier
+                            .size(30.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Editar",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    // BOTÓN ELIMINAR
+                    IconButton(
+                        onClick = { onDeleteClick(pin.id) },
+                        modifier = Modifier
+                            .size(30.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Eliminar",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
 
-            // SECCIÓN DE DATOS (Se mantiene igual que la tenías)
+            // SECCIÓN DE DATOS
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(
                     text = pin.title,

@@ -6,4 +6,5 @@ interface PinsRepository {
     suspend fun getPins(): List<Pin>
     suspend fun addPin(title: String, imageUrl: String, category: String, season: String): Boolean
     suspend fun deletePin(pinId: String): Boolean // Nueva función para eliminar
+    suspend fun updatePin(pinId: String, title: String, imageUrl: String, category: String, season: String): Boolean
 }
