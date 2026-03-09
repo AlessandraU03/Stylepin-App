@@ -54,9 +54,7 @@ class PinsViewModel(
             if (success) {
                 fetchPins()
             } else {
-                _uiState.update {
-                    it.copy(error = "No se pudo eliminar el pin.")
-                }
+                _uiState.update { it.copy(error = "No tienes permiso o el pin no existe") }
             }
         }
     }

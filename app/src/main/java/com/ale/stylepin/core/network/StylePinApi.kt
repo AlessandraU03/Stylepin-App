@@ -28,14 +28,14 @@ interface StylePinApi {
     @POST("api/v1/pins")
     suspend fun addPin(@Body request: AddPinRequest): PinResponse
 
-    @DELETE("api/v1/pins/{pinId}")
+    @DELETE("api/v1/pins/{pin_id}")
     suspend fun deletePin(
-        @Path("pinId") pinId: String
+        @Path("pin_id") pinId: String
     ): Response<Unit>
 
-    @PATCH("api/v1/pins/{pin_id}") // Cambiado a PATCH y pin_id
+    @PATCH("api/v1/pins/{pin_id}")
     suspend fun updatePin(
-        @Path("pin_id") pinId: String, // El nombre en @Path debe coincidir con {pin_id}
+        @Path("pin_id") pinId: String,
         @Body request: UpdatePinRequest
     ): PinResponse
 }

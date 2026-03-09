@@ -14,9 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // Importación necesaria
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ale.stylepin.features.pins.domain.entities.Pin
-import com.ale.stylepin.features.pins.presentation.components.SeasonFilterRow
 import com.ale.stylepin.features.pins.presentation.components.PinCard
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 
@@ -27,35 +26,35 @@ fun PinsScreen(
     onNavigateToAddPin: () -> Unit,
     onNavigateToEditPin: (Pin) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    var pinIdToDelete by remember { mutableStateOf<String?>(null) }
+    // Cambiamos 'by' por '=' y usamos '.value' para evitar avisos del linter
+    val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+    val pinIdToDeleteState = remember { mutableStateOf<String?>(null) }
+    val currentPinIdToDelete = pinIdToDeleteState.value
 
     // Diálogo de eliminación
-    if (pinIdToDelete != null) {
+    if (currentPinIdToDelete != null) {
         AlertDialog(
-            onDismissRequest = { pinIdToDelete = null },
+            onDismissRequest = { pinIdToDeleteState.value = null },
             title = { Text("¿Eliminar Pin?") },
             text = { Text("Esta acción eliminará el outfit permanentemente de tu cuenta.") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        pinIdToDelete?.let { id -> viewModel.deletePin(id) }
-                        pinIdToDelete = null
+                        viewModel.deletePin(currentPinIdToDelete)
+                        pinIdToDeleteState.value = null
                     }
                 ) {
                     Text("Eliminar", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pinIdToDelete = null }) {
+                TextButton(onClick = { pinIdToDeleteState.value = null }) {
                     Text("Cancelar")
                 }
             }
         )
     }
 
-    // Configuración del Pull to Refresh ligada al uiState.isLoading
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isLoading,
         onRefresh = { viewModel.fetchPins() }
@@ -64,10 +63,7 @@ fun PinsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("StylePin Seasons") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                title = { Text("StylePin Seasons") }
             )
         },
         floatingActionButton = {
@@ -82,56 +78,37 @@ fun PinsScreen(
                 )
             }
         }
-    ) { padding ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
-                .padding(padding)
+                .padding(innerPadding)
                 .fillMaxSize()
                 .pullRefresh(pullRefreshState)
         ) {
-            // Muestra de errores dinámicos
-            uiState.error?.let { msg ->
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Text(
-                        text = msg,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
-            // Grilla de Pins
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(8.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Usamos uiState.filteredPins que viene procesado del ViewModel
                 items(uiState.filteredPins, key = { it.id }) { pin ->
                     PinCard(
                         pin = pin,
-                        onDeleteClick = { id -> pinIdToDelete = id },
+                        onDeleteClick = { id ->
+                            pinIdToDeleteState.value = id
+                        },
                         onEditClick = { onNavigateToEditPin(pin) }
                     )
                 }
             }
 
-            // Loader central solo si la lista está vacía
             if (uiState.isLoading && uiState.pins.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
 
-            // Indicador visual de PullRefresh
             PullRefreshIndicator(
                 refreshing = uiState.isLoading,
                 state = pullRefreshState,
                 modifier = Modifier.align(Alignment.TopCenter),
-                backgroundColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary
             )
         }

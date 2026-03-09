@@ -33,10 +33,9 @@ class PinRepositoryImpl(private val api: StylePinApi) : PinsRepository {
     override suspend fun deletePin(pinId: String): Boolean {
         return try {
             val response = api.deletePin(pinId)
-            // El código 204 No Content es el estándar para eliminaciones exitosas
             response.isSuccessful
         } catch (e: Exception) {
-            Log.e("DELETE_ERROR", "Error al eliminar pin: ${e.message}")
+            android.util.Log.e("DELETE_ERROR", "Fallo al eliminar pin: ${e.message}")
             false
         }
     }
