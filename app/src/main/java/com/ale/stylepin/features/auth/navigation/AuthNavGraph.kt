@@ -4,7 +4,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
-import com.ale.stylepin.core.navigation.FeatureNavGraph
 import com.ale.stylepin.core.navigation.LoginRoute
 import com.ale.stylepin.core.navigation.PinsRoute
 import com.ale.stylepin.core.navigation.RegisterRoute

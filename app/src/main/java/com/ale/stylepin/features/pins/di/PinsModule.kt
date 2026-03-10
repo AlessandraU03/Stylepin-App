@@ -1,6 +1,5 @@
 package com.ale.stylepin.features.pins.di
 
-import com.ale.stylepin.core.di.AppContainer
 import com.ale.stylepin.features.pins.data.repositories.PinRepositoryImpl
 import com.ale.stylepin.features.pins.domain.repository.PinsRepository
 import com.ale.stylepin.features.pins.domain.usecases.GetPinsUseCase

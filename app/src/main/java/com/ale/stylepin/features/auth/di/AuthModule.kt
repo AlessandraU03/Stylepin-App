@@ -1,6 +1,5 @@
 package com.ale.stylepin.features.auth.di
 
-import com.ale.stylepin.core.di.AppContainer
 import com.ale.stylepin.features.auth.presentation.viewmodels.LoginViewModelFactory
 import com.ale.stylepin.features.auth.presentation.viewmodels.RegisterViewModelFactory // Nueva importación
 import com.ale.stylepin.features.auth.domain.usecases.LoginUseCase

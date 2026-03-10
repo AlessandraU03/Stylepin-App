@@ -6,7 +6,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import androidx.compose.runtime.LaunchedEffect
-import com.ale.stylepin.core.navigation.FeatureNavGraph
 import com.ale.stylepin.core.navigation.PinsRoute
 import com.ale.stylepin.core.navigation.AddPinRoute
 import com.ale.stylepin.core.navigation.EditPinRoute
