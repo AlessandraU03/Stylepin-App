@@ -1,27 +1,26 @@
 package com.ale.stylepin.features.pins.data.repositories
 
-import android.util.Log
 import com.ale.stylepin.core.network.StylePinApi
 import com.ale.stylepin.features.pins.data.datasources.remote.mapper.toDomain
 import com.ale.stylepin.features.pins.data.datasources.remote.model.AddPinRequest
 import com.ale.stylepin.features.pins.data.datasources.remote.model.UpdatePinRequest
 import com.ale.stylepin.features.pins.domain.entities.Pin
 import com.ale.stylepin.features.pins.domain.repository.PinsRepository
+import javax.inject.Inject
 
-class PinRepositoryImpl(private val api: StylePinApi) : PinsRepository {
+class PinRepositoryImpl @Inject constructor(
+    private val api: StylePinApi
+) : PinsRepository {
+
     override suspend fun getPins(): List<Pin> {
-        // Al corregir la interfaz StylePinApi (añadiendo getPins), el error de 'it' desaparece
         return api.getPins().map { it.toDomain() }
     }
 
     override suspend fun addPin(title: String, imageUrl: String, category: String, season: String): Boolean {
         return try {
             val request = AddPinRequest(
-                title = title,
-                image_url = imageUrl,
-                description = "",
-                category = category,
-                season = season
+                title = title, image_url = imageUrl, description = "",
+                category = category, season = season
             )
             api.addPin(request)
             true
@@ -43,10 +42,7 @@ class PinRepositoryImpl(private val api: StylePinApi) : PinsRepository {
     override suspend fun updatePin(pinId: String, title: String, imageUrl: String, category: String, season: String): Boolean {
         return try {
             val request = UpdatePinRequest(
-                title = title,
-                description = "",
-                category = category,
-                season = season
+                title = title, description = "", category = category, season = season
             )
             api.updatePin(pinId, request)
             true

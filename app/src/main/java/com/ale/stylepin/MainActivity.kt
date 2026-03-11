@@ -5,10 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.ale.stylepin.core.navigation.NavigationWrapper
-import com.ale.stylepin.features.pins.navigation.PinsNavGraph
 import com.ale.stylepin.core.ui.theme.StylepinTheme
-import com.ale.stylepin.features.auth.navigation.AuthNavGraph
 import dagger.hilt.android.AndroidEntryPoint
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -16,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             StylepinTheme {
-                NavigationWrapper()   // ✅ Sin parámetros
+                NavigationWrapper()
             }
         }
     }

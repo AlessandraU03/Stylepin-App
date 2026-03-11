@@ -1,22 +1,25 @@
 package com.ale.stylepin.features.pins.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.features.pins.domain.usecases.UpdatePinsUseCase
 import com.ale.stylepin.features.pins.presentation.screens.PinsUiState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class EditPinViewModel(private val updatePinsUseCase: UpdatePinsUseCase) : ViewModel() {
+@HiltViewModel
+class EditPinViewModel @Inject constructor(
+    private val updatePinsUseCase: UpdatePinsUseCase
+) : ViewModel() {
     private val _uiState = MutableStateFlow(PinsUiState())
     val uiState = _uiState.asStateFlow()
 
-    // Inicializamos el estado con los datos que vienen de la navegación
     fun initData(title: String, imageUrl: String, category: String, season: String) {
-        if (_uiState.value.title.isBlank()) { // Solo inicializa una vez
+        if (_uiState.value.title.isBlank()) {
             _uiState.update {
                 it.copy(title = title, imageUrl = imageUrl, selectedCategory = category, selectedSeason = season)
             }

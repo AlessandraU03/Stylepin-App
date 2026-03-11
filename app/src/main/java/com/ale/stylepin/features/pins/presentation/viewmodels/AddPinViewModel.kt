@@ -3,38 +3,28 @@ package com.ale.stylepin.features.pins.presentation.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.features.pins.domain.usecases.AddPinsUseCase
-import com.ale.stylepin.features.pins.presentation.screens.PinsUiState 
+import com.ale.stylepin.features.pins.presentation.screens.PinsUiState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class AddPinViewModel(
+@HiltViewModel
+class AddPinViewModel @Inject constructor(
     private val addPinsUseCase: AddPinsUseCase
 ) : ViewModel() {
 
-    // Usamos PinsUiState en lugar de crear una clase nueva
     private val _uiState = MutableStateFlow(PinsUiState())
     val uiState = _uiState.asStateFlow()
 
-    fun onTitleChange(newTitle: String) {
-        _uiState.update { it.copy(title = newTitle) }
-    }
-
-    fun onImageUrlChange(newUrl: String) {
-        _uiState.update { it.copy(imageUrl = newUrl) }
-    }
-
-    fun onCategoryChange(newCategory: String) {
-        _uiState.update { it.copy(selectedCategory = newCategory) }
-    }
-
-    fun onSeasonChange(newSeason: String) {
-        _uiState.update { it.copy(selectedSeason = newSeason) }
-    }
+    fun onTitleChange(newTitle: String) = _uiState.update { it.copy(title = newTitle) }
+    fun onImageUrlChange(newUrl: String) = _uiState.update { it.copy(imageUrl = newUrl) }
+    fun onCategoryChange(newCategory: String) = _uiState.update { it.copy(selectedCategory = newCategory) }
+    fun onSeasonChange(newSeason: String) = _uiState.update { it.copy(selectedSeason = newSeason) }
 
     fun savePin(onSuccess: () -> Unit) {
-        // Reutilizamos isLoading para indicar que está guardando
         if (_uiState.value.isLoading) return
 
         viewModelScope.launch {
@@ -42,7 +32,6 @@ class AddPinViewModel(
 
             try {
                 val currentState = _uiState.value
-
                 val success = addPinsUseCase.addPin(
                     title = currentState.title,
                     imageUrl = currentState.imageUrl,
@@ -67,7 +56,6 @@ class AddPinViewModel(
     }
 
     private fun resetState() {
-        // Reseteamos usando el constructor por defecto de tu clase existente
         _uiState.update { PinsUiState() }
     }
 }

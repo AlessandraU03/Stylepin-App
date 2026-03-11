@@ -5,12 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.features.pins.domain.usecases.DeletePinsUseCase
 import com.ale.stylepin.features.pins.domain.usecases.GetPinsUseCase
 import com.ale.stylepin.features.pins.presentation.screens.PinsUiState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class PinsViewModel(
+@HiltViewModel
+class PinsViewModel @Inject constructor(
     private val getPinsUseCase: GetPinsUseCase,
     private val deletePinUseCase: DeletePinsUseCase
 ) : ViewModel() {
