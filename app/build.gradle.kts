@@ -40,24 +40,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
-        }
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
         resValues = true
     }
-
-    secrets {
-        propertiesFileName = "local.properties"
-        defaultPropertiesFileName = "local.defaults.properties"
-        ignoreList.add("sdk.dir")
-    }
-
 
     flavorDimensions.add("environment")
     productFlavors {
@@ -75,6 +62,18 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_21)
+    }
+}
+
+secrets {
+    propertiesFileName = "local.properties"
+    defaultPropertiesFileName = "local.defaults.properties"
+    ignoreList.add("sdk.dir")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -84,6 +83,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material)
 
     implementation(libs.androidx.compose.ui.text.google.fonts)      // G Fonts
     implementation(libs.androidx.lifecycle.viewmodel.compose)       // viewModel()
