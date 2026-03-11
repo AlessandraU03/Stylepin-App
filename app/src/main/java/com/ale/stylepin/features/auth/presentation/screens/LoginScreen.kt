@@ -1,12 +1,17 @@
 package com.ale.stylepin.features.auth.presentation.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ale.stylepin.features.auth.presentation.components.StylePinPasswordField
 import com.ale.stylepin.features.auth.presentation.components.StylePinTextField
@@ -21,68 +26,69 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = "StylePin",
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.primary
+            fontSize = 48.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onBackground
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(48.dp))
 
-        // Identidad (Username/Email) vinculado al ViewModel
         StylePinTextField(
             value = uiState.username,
             onValueChange = { viewModel.onIdentityChanged(it) },
-            label = "Usuario o Correo"
+            label = "Usuario",
+            icon = Icons.Outlined.Person
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Password vinculado al ViewModel
         StylePinPasswordField(
             value = uiState.password,
             onValueChange = { viewModel.onPasswordChanged(it) },
-            label = "Contraseña"
+            label = "Contraseña",
+            icon = Icons.Outlined.Lock
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        if (uiState.isLoading) {
-            CircularProgressIndicator()
-        } else {
-            Button(
-                onClick = { viewModel.login() },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                // Lógica de habilitación derivada directamente del estado
-                enabled = uiState.username.isNotEmpty() && uiState.password.isNotEmpty()
-            ) {
-                Text("Iniciar Sesión")
-            }
-
-            TextButton(onClick = onNavigateToRegister) {
-                Text("¿No tienes cuenta? Regístrate aquí")
+        Button(
+            onClick = { viewModel.login() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            enabled = uiState.username.isNotEmpty() && uiState.password.isNotEmpty() && !uiState.isLoading
+        ) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("Entrar", fontSize = 16.sp)
             }
         }
 
-        // Navegación reactiva
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("¿No tienes cuenta? ", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = onNavigateToRegister, contentPadding = PaddingValues(0.dp)) {
+                Text("Regístrate", color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
         LaunchedEffect(uiState.isLoginSuccess) {
-            if (uiState.isLoginSuccess) {
-                onLoginSuccess()
-            }
+            if (uiState.isLoginSuccess) onLoginSuccess()
         }
 
-        // Errores centralizados
         uiState.error?.let { msg ->
-            Text(
-                text = msg,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 16.dp)
-            )
+            Text(text = msg, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp))
         }
     }
 }

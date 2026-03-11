@@ -42,6 +42,12 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     private fun parseErrorMessage(exception: HttpException): String {
+        val code = exception.code()
+
+        // Mensajes amigables para errores comunes HTTP
+        if (code == 401) return "Usuario o contraseña incorrectos."
+        if (code == 409 || code == 422) return "Verifica tus datos. Es posible que el correo o usuario ya estén registrados."
+
         return try {
             val errorBody = exception.response()?.errorBody()?.string()
             if (errorBody != null) {
@@ -53,13 +59,13 @@ class AuthRepositoryImpl @Inject constructor(
                         else json.optString("message", "Error desconocido")
                     }
                     json.has("message") -> json.getString("message")
-                    else -> "Error: ${exception.code()}"
+                    else -> "Error en el servidor ($code)"
                 }
             } else {
-                "Error: ${exception.code()}"
+                "Error en el servidor ($code)"
             }
         } catch (e: Exception) {
-            "Error en el servidor"
+            "No se pudo conectar con el servidor."
         }
     }
 }
