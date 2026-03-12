@@ -1,10 +1,17 @@
 package com.ale.stylepin.features.pins.domain.usecases
 
+import com.ale.stylepin.features.pins.domain.entities.PinUpdate
 import com.ale.stylepin.features.pins.domain.repository.PinsRepository
 import javax.inject.Inject
 
-class UpdatePinsUseCase @Inject constructor(private val repository: PinsRepository) {
-    suspend fun execute(pinId: String, title: String, imageUrl: String, category: String, season: String): Boolean {
-        return repository.updatePin(pinId, title, imageUrl, category, season)
+class UpdatePinsUseCase @Inject constructor(
+    private val repository: PinsRepository
+) {
+    suspend operator fun invoke(pinUpdate: PinUpdate): Result<Boolean> {
+        return try {
+            Result.success(repository.updatePin(pinUpdate))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

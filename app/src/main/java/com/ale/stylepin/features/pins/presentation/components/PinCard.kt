@@ -1,6 +1,7 @@
 package com.ale.stylepin.features.pins.presentation.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,13 +22,15 @@ import com.ale.stylepin.features.pins.domain.entities.Pin
 @Composable
 fun PinCard(
     pin: Pin,
-    onDeleteClick: (String) -> Unit,
-    onEditClick: () -> Unit // <-- 1. Agregado el parámetro necesario
+    onPinClick: (String) -> Unit,   // toque en la card → detalle
+    onEditClick: () -> Unit,
+    onDeleteClick: (String) -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(4.dp),
+            .padding(4.dp)
+            .clickable { onPinClick(pin.id) },  // toda la card es clickeable
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
@@ -40,14 +43,12 @@ fun PinCard(
                     contentScale = ContentScale.Crop
                 )
 
-                // 2. Fila de botones arriba a la derecha
                 Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // BOTÓN EDITAR
                     IconButton(
                         onClick = onEditClick,
                         modifier = Modifier
@@ -62,7 +63,6 @@ fun PinCard(
                         )
                     }
 
-                    // BOTÓN ELIMINAR
                     IconButton(
                         onClick = { onDeleteClick(pin.id) },
                         modifier = Modifier
@@ -79,35 +79,25 @@ fun PinCard(
                 }
             }
 
-            // SECCIÓN DE DATOS
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(
                     text = pin.title,
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1
                 )
-
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = "@${pin.username}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Text(text = "@${pin.username}", style = MaterialTheme.typography.bodySmall)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Favorite,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp)
                         )
-                        Text(
-                            text = " ${pin.likesCount}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text(text = " ${pin.likesCount}", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

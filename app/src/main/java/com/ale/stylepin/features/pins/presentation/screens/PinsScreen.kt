@@ -24,58 +24,44 @@ import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 fun PinsScreen(
     viewModel: PinsViewModel,
     onNavigateToAddPin: () -> Unit,
+    onNavigateToPinDetail: (String) -> Unit,
     onNavigateToEditPin: (Pin) -> Unit
 ) {
-    // Cambiamos 'by' por '=' y usamos '.value' para evitar avisos del linter
-    val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
-    val pinIdToDeleteState = remember { mutableStateOf<String?>(null) }
-    val currentPinIdToDelete = pinIdToDeleteState.value
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var pinIdToDelete by remember { mutableStateOf<String?>(null) }
 
-    // Diálogo de eliminación
-    if (currentPinIdToDelete != null) {
+    pinIdToDelete?.let { id ->
         AlertDialog(
-            onDismissRequest = { pinIdToDeleteState.value = null },
+            onDismissRequest = { pinIdToDelete = null },
             title = { Text("¿Eliminar Pin?") },
             text = { Text("Esta acción eliminará el outfit permanentemente de tu cuenta.") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deletePin(currentPinIdToDelete)
-                        pinIdToDeleteState.value = null
-                    }
-                ) {
+                TextButton(onClick = {
+                    viewModel.deletePin(id)
+                    pinIdToDelete = null
+                }) {
                     Text("Eliminar", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pinIdToDeleteState.value = null }) {
-                    Text("Cancelar")
-                }
+                TextButton(onClick = { pinIdToDelete = null }) { Text("Cancelar") }
             }
         )
     }
 
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isLoading,
-        onRefresh = { viewModel.fetchPins() }
+        onRefresh = { viewModel.loadPins() }
     )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("StylePin Seasons") }
-            )
-        },
+        topBar = { TopAppBar(title = { Text("StylePin Seasons") }) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToAddPin,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Agregar Pin",
-                    tint = Color.White
-                )
+                Icon(Icons.Default.Add, contentDescription = "Agregar Pin", tint = Color.White)
             }
         }
     ) { innerPadding ->
@@ -93,10 +79,12 @@ fun PinsScreen(
                 items(uiState.filteredPins, key = { it.id }) { pin ->
                     PinCard(
                         pin = pin,
-                        onDeleteClick = { id ->
-                            pinIdToDeleteState.value = id
+                        onPinClick = { onNavigateToPinDetail(it) },
+                        onEditClick = {
+                            viewModel.loadPinById(pin.id)
+                            onNavigateToEditPin(pin)
                         },
-                        onEditClick = { onNavigateToEditPin(pin) }
+                        onDeleteClick = { pinIdToDelete = it }
                     )
                 }
             }

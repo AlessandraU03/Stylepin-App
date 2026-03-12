@@ -5,10 +5,17 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AddPinRequest(
     val title: String,
-    val image_url: String,
-    val description: String?,
+    val imageUrl: String,
     val category: String,
     val season: String,
-    val occasions: List<String> = emptyList(),
-    val is_private: Boolean = false
+    val description: String?,
+    val isPrivate: Boolean,
+    val styles: List<String>,
+    val occasions: List<String>,
+    val brands: List<String>,
+    val priceRange: String,
+    val whereToBuy: String?,
+    val purchaseLink: String?,
+    val colors: List<String>,
+    val tags: List<String>
 )

@@ -1,73 +1,174 @@
 package com.ale.stylepin.features.pins.presentation.screens
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState // Importante importar esto
-import androidx.compose.runtime.getValue        // Importante importar esto
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.ale.stylepin.features.pins.presentation.viewmodels.AddPinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.ale.stylepin.features.pins.presentation.viewmodels.PinFormEvent
+import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddPinScreen(viewModel: AddPinViewModel, onBack: () -> Unit) {
+fun AddPinScreen(viewModel: PinsViewModel, onBack: () -> Unit) {
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onFormEvent(PinFormEvent.ImageUrlChanged(it.toString())) }
+    }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Nuevo Pin") }) }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Selector de imagen
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, Color.Gray, RoundedCornerShape(12.dp))
+                    .clickable { galleryLauncher.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                if (uiState.imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = uiState.imageUrl,
+                        contentDescription = "Imagen seleccionada",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text("Toca para seleccionar imagen")
+                    }
+                }
+            }
 
-            // 2. TÍTULO
+            Spacer(Modifier.height(16.dp))
+
             OutlinedTextField(
-                value = uiState.title, // Leemos del State
-                onValueChange = { viewModel.onTitleChange(it) }, // Usamos la función del VM
-                label = { Text("Título del Outfit") },
+                value = uiState.title,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.TitleChanged(it)) },
+                label = { Text("Título *") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(Modifier.height(8.dp))
 
-            // 3. IMAGEN
             OutlinedTextField(
-                value = uiState.imageUrl, // Leemos del State
-                onValueChange = { viewModel.onImageUrlChange(it) }, // Usamos la función del VM
-                label = { Text("URL de la Imagen") },
+                value = uiState.description,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.DescriptionChanged(it)) },
+                label = { Text("Descripción") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.selectedCategory,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.CategoryChanged(it)) },
+                label = { Text("Categoría (outfit_completo, calzado, etc.) *") },
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // 4. BOTÓN
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.selectedSeason,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.SeasonChanged(it)) },
+                label = { Text("Temporada (todo_el_ano, verano, etc.)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.priceRange,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.PriceRangeChanged(it)) },
+                label = { Text("Rango de precio (bajo_500, etc.)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.whereToBuy,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.WhereToBuyChanged(it)) },
+                label = { Text("Dónde comprar") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.purchaseLink,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.PurchaseLinkChanged(it)) },
+                label = { Text("Link de compra") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = uiState.isPrivate,
+                    onCheckedChange = { viewModel.onFormEvent(PinFormEvent.IsPrivateChanged(it)) }
+                )
+                Text("¿Hacer este pin privado?")
+            }
+
+            Spacer(Modifier.height(24.dp))
+
             Button(
                 onClick = { viewModel.savePin { onBack() } },
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                // Usamos isLoading (que viene de PinsUiState) en lugar de isSaving
-                enabled = !uiState.isLoading && uiState.title.isNotBlank()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading && uiState.title.isNotBlank() && uiState.imageUrl.isNotEmpty()
             ) {
                 if (uiState.isLoading) {
-                    CircularProgressIndicator(color = Color.White)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 } else {
-                    Text("Publicar Pin")
+                    Text("Publicar Outfit")
                 }
             }
 
-            // Opcional: Mostrar error si existe
-            if (uiState.error != null) {
+            uiState.error?.let { error ->
                 Text(
-                    text = uiState.error ?: "",
-                    color = Color.Red,
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }

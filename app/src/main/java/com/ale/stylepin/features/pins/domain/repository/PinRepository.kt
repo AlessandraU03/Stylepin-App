@@ -1,10 +1,13 @@
 package com.ale.stylepin.features.pins.domain.repository
 
 import com.ale.stylepin.features.pins.domain.entities.Pin
+import com.ale.stylepin.features.pins.domain.entities.PinCreate
+import com.ale.stylepin.features.pins.domain.entities.PinUpdate
 
 interface PinsRepository {
     suspend fun getPins(): List<Pin>
-    suspend fun addPin(title: String, imageUrl: String, category: String, season: String): Boolean
-    suspend fun deletePin(pinId: String): Boolean // Nueva función para eliminar
-    suspend fun updatePin(pinId: String, title: String, imageUrl: String, category: String, season: String): Boolean
+    suspend fun getPinById(pinId: String): Pin
+    suspend fun addPin(pinCreate: PinCreate): Boolean
+    suspend fun updatePin(pinUpdate: PinUpdate): Boolean
+    suspend fun deletePin(pinId: String): Boolean
 }
