@@ -42,6 +42,9 @@ import com.ale.stylepin.features.profile.presentation.viewmodels.SettingsViewMod
 import com.ale.stylepin.features.community.presentation.screens.CommunityScreen
 import com.ale.stylepin.features.community.presentation.viewmodels.CommunityViewModel
 
+import com.ale.stylepin.features.profile.presentation.viewmodels.EditProfileViewModel
+import com.ale.stylepin.features.profile.presentation.screens.EditProfileScreen
+
 @Composable
 fun NavigationWrapper() {
     val navController = rememberNavController()
@@ -192,9 +195,11 @@ fun NavigationWrapper() {
             }
 
             composable<EditProfileRoute> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Pantalla para Editar Perfil (Próximamente)")
-                }
+                val viewModel: EditProfileViewModel = hiltViewModel()
+                EditProfileScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             // PANTALLA DE CONFIGURACIÓN (Cerrar sesión)

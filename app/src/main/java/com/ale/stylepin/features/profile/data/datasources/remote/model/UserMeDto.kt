@@ -3,9 +3,13 @@ package com.ale.stylepin.features.profile.data.datasources.remote.model
 import com.google.gson.annotations.SerializedName
 
 data class UserMeDto(
-    @SerializedName("id") val id: String,
-    @SerializedName("username") val username: String,
+    val id: String,
+    val username: String,
+    val email: String, // Agregado
     @SerializedName("full_name") val fullName: String,
-    @SerializedName("bio") val bio: String?,
-    @SerializedName("avatar_url") val avatarUrl: String?
+    val bio: String?,
+    @SerializedName("avatar_url") val avatarUrl: String?,
+    val gender: String?, // Agregado
+    @SerializedName("preferred_styles") val preferredStyles: List<String>?, // Agregado
+    @SerializedName("is_verified") val isVerified: Boolean // Agregado
 )
