@@ -1,34 +1,25 @@
-// com/ale/stylepin/features/pins/presentation/screens/PinsUiState.kt
 package com.ale.stylepin.features.pins.presentation.screens
 
-import com.ale.stylepin.features.boards.domain.entities.Board
-import com.ale.stylepin.features.pins.data.datasources.remote.model.CommentDto
 import com.ale.stylepin.features.pins.domain.entities.Pin
 
 data class PinsUiState(
     val currentUserId: String? = null,
+    // ── Lista de pins ──────────────────────────────────────
     val isLoading: Boolean = false,
     val pins: List<Pin> = emptyList(),
     val filteredPins: List<Pin> = emptyList(),
     val error: String? = null,
 
+    // ── Detalle de un pin individual ───────────────────────
     val pinDetail: Pin? = null,
     val isLoadingDetail: Boolean = false,
 
-    // COMENTARIOS
-    val comments: List<CommentDto> = emptyList(),
-    val newCommentText: String = "",
-
-    // NUEVO: GUARDADOS Y TABLEROS
-    val userBoards: List<Board> = emptyList(),
-    val isSavingToBoard: Boolean = false,
-
-    // Formulario de creación
+    // ── Formulario de creación / edición ───────────────────
     val title: String = "",
     val description: String = "",
     val imageUrl: String = "",
-    val selectedCategory: String = "outfit_completo",
-    val selectedSeason: String = "todo_el_ano",
+    val selectedCategory: String = "",
+    val selectedSeason: String = "",
     val isPrivate: Boolean = false,
     val styles: List<String> = emptyList(),
     val occasions: List<String> = emptyList(),

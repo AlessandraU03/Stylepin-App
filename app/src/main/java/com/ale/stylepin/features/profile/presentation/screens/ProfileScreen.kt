@@ -1,11 +1,10 @@
+// com/ale/stylepin/features/profile/presentation/screens/ProfileScreen.kt
 package com.ale.stylepin.features.profile.presentation.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.staggeredgrid.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.MoreVert
@@ -25,7 +24,6 @@ import coil.compose.AsyncImage
 import com.ale.stylepin.features.profile.presentation.components.ProfileStatItem
 import com.ale.stylepin.features.profile.presentation.components.formatStatNumber
 import com.ale.stylepin.features.profile.presentation.viewmodels.ProfileViewModel
-import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,20 +31,23 @@ fun ProfileScreen(
     viewModel: ProfileViewModel,
     onBack: () -> Unit,
     onEditProfileClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onCommunityClick: (Int) -> Unit,
-    onPinClick: (String) -> Unit
+    onSettingsClick: () -> Unit, // NUEVO: Para los 3 puntitos
+    onCommunityClick: (Int) -> Unit // NUEVO: Para Seguidores/Siguiendo (0 o 1)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("StylePin", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Atrás") } },
+                title = {
+                    Text("StylePin", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Atrás") }
+                },
                 actions = {
-                    IconButton(onClick = { }) { Icon(Icons.Outlined.Share, contentDescription = "Compartir") }
+                    IconButton(onClick = { /* Acción compartir */ }) { Icon(Icons.Outlined.Share, contentDescription = "Compartir") }
+                    // Funcionalidad de los 3 puntitos agregada
                     IconButton(onClick = onSettingsClick) { Icon(Icons.Outlined.MoreVert, contentDescription = "Más opciones") }
                 }
             )
@@ -62,187 +63,107 @@ fun ProfileScreen(
             }
         } else {
             uiState.profile?.let { profile ->
-                // Usamos StaggeredGrid como contenedor principal para que la cabecera pueda scrollear
-                LazyVerticalStaggeredGrid(
-                    columns = StaggeredGridCells.Fixed(2),
+                Column(
                     modifier = Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.background),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalItemSpacing = 8.dp
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // 1. LA CABECERA DEL PERFIL (Ocupa las 2 columnas)
-                    item(span = StaggeredGridItemSpan.FullLine) {
-                        ProfileHeader(
-                            profile = profile,
-                            onEditProfileClick = onEditProfileClick,
-                            onCommunityClick = onCommunityClick
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // 2. LAS PESTAÑAS (Ocupa las 2 columnas)
-                    item(span = StaggeredGridItemSpan.FullLine) {
-                        TabRow(
-                            selectedTabIndex = selectedTab,
-                            containerColor = MaterialTheme.colorScheme.background,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                    // Avatar
+                    AsyncImage(
+                        model = profile.avatarUrl.ifEmpty { "https://ui-avatars.com/api/?name=${profile.fullName.replace(" ", "+")}&background=random" },
+                        contentDescription = "Avatar de ${profile.fullName}",
+                        modifier = Modifier.size(100.dp).clip(CircleShape).background(Color.LightGray),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Info principal
+                    Text(text = profile.fullName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(text = "@${profile.username} • ${formatStatNumber(profile.followersCount)} seguidores", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                    // Bio
+                    Text(
+                        text = profile.bio,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp)
+                    )
+
+                    // Botón de acción (Se quitó el de mensaje, ahora Editar Perfil toma todo el ancho)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Button(
+                            onClick = onEditProfileClick,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large
                         ) {
-                            listOf("Pins", "Tableros", "Guardados").forEachIndexed { index, text ->
-                                Tab(
-                                    selected = selectedTab == index,
-                                    onClick = { selectedTab = index },
-                                    text = { Text(text, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) }
-                                )
-                            }
+                            Text("Editar Perfil")
                         }
                     }
 
-                    // 3. EL CONTENIDO DE LA CUADRÍCULA SEGÚN LA PESTAÑA
-                    if (uiState.isLoadingContent) {
-                        item(span = StaggeredGridItemSpan.FullLine) {
-                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
-                            }
-                        }
-                    } else {
-                        when (selectedTab) {
-                            0 -> { // PINS
-                                if (uiState.pins.isEmpty()) {
-                                    item(span = StaggeredGridItemSpan.FullLine) { EmptyStateMessage("Aún no tienes pins creados") }
-                                } else {
-                                    items(uiState.pins) { pin ->
-                                        GridImageItem(
-                                            imageUrl = pin.imageUrl,
-                                            onClick = { onPinClick(pin.id) } // <--- Mandamos el clic con el ID
-                                        )
-                                    }
-                                }
-                            }
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                            1 -> { // TABLEROS
-                                if (uiState.boards.isEmpty()) {
-                                    item(span = StaggeredGridItemSpan.FullLine) { EmptyStateMessage("Aún no tienes tableros") }
-                                } else {
-                                    items(uiState.boards) { board ->
-                                        GridBoardItem(name = board.name, imageUrl = board.coverImageUrl, count = board.pinsCount)
-                                    }
-                                }
-                            }
-                            2 -> { // GUARDADOS
-                                if (uiState.savedPins.isEmpty()) {
-                                    item(span = StaggeredGridItemSpan.FullLine) { EmptyStateMessage("No has guardado ningún pin") }
-                                } else {
-                                    items(uiState.savedPins) { saved ->
-                                        // ¡AQUÍ FALTABA EL onClick!
-                                        GridImageItem(
-                                            imageUrl = saved.imageUrl,
-                                            onClick = { onPinClick(saved.pinId) }
-                                        )
-                                    }
-                                }
-                            }
+                    // Estadísticas (Pins, Seguidores, Siguiendo) - ¡Ahora son clickeables!
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // PINS
+                        Box(modifier = Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
+                            ProfileStatItem(formatStatNumber(profile.pinsCount), "PINS")
                         }
+
+                        // SEGUIDORES (Lleva a la Tab 0)
+                        Box(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable { onCommunityClick(0) }
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ProfileStatItem(formatStatNumber(profile.followersCount), "SEGUIDORES")
+                        }
+
+                        // SIGUIENDO (Lleva a la Tab 1)
+                        Box(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable { onCommunityClick(1) }
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ProfileStatItem(formatStatNumber(profile.followingCount), "SIGUIENDO")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Tabs
+                    var selectedTab by remember { mutableIntStateOf(0) }
+                    TabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = MaterialTheme.colorScheme.background
+                    ) {
+                        listOf("Pins", "Tableros", "Guardados").forEachIndexed { index, text ->
+                            Tab(
+                                selected = selectedTab == index,
+                                onClick = { selectedTab = index },
+                                text = { Text(text, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) }
+                            )
+                        }
+                    }
+
+                    // Aquí iría el contenido de los Tabs (LazyVerticalGrid)
+                    Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Text("Contenido de ${listOf("Pins", "Tableros", "Guardados")[selectedTab]}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
     }
-}
-
-// --- SUB-COMPONENTES DE LA PANTALLA ---
-
-@Composable
-fun ProfileHeader(
-    profile: com.ale.stylepin.features.profile.domain.entities.Profile,
-    onEditProfileClick: () -> Unit,
-    onCommunityClick: (Int) -> Unit
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        AsyncImage(
-            model = profile.avatarUrl.ifEmpty { "https://ui-avatars.com/api/?name=${profile.fullName.replace(" ", "+")}&background=random" },
-            contentDescription = "Avatar",
-            modifier = Modifier.size(100.dp).clip(CircleShape).background(Color.LightGray),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = profile.fullName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text(text = "@${profile.username}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-        if (profile.bio.isNotEmpty()) {
-            Text(
-                text = profile.bio,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp)
-            )
-        }
-
-        Button(
-            onClick = onEditProfileClick,
-            modifier = Modifier.fillMaxWidth(0.6f).padding(vertical = 12.dp),
-            shape = MaterialTheme.shapes.large
-        ) {
-            Text("Editar Perfil")
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(modifier = Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
-                ProfileStatItem(formatStatNumber(profile.pinsCount), "PINS")
-            }
-            Box(modifier = Modifier.clip(MaterialTheme.shapes.small).clickable { onCommunityClick(0) }.padding(8.dp), contentAlignment = Alignment.Center) {
-                ProfileStatItem(formatStatNumber(profile.followersCount), "SEGUIDORES")
-            }
-            Box(modifier = Modifier.clip(MaterialTheme.shapes.small).clickable { onCommunityClick(1) }.padding(8.dp), contentAlignment = Alignment.Center) {
-                ProfileStatItem(formatStatNumber(profile.followingCount), "SIGUIENDO")
-            }
-        }
-    }
-}
-
-@Composable
-fun GridImageItem(imageUrl: String, onClick: () -> Unit) { // <--- Agregamos onClick aquí
-    val height = remember { kotlin.random.Random.nextInt(150, 300).dp }
-
-    AsyncImage(
-        model = imageUrl.ifEmpty { "https://placehold.co/400x600/png" },
-        contentDescription = "Pin",
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(height)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.LightGray)
-            .clickable { onClick() } // <--- ¡Esto hace que la imagen sea tocable!
-    )
-}
-
-@Composable
-fun GridBoardItem(name: String, imageUrl: String, count: Int) {
-    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-        AsyncImage(
-            model = imageUrl.ifEmpty { "https://placehold.co/400x400/png" },
-            contentDescription = "Board Cover",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f) // Cuadrado para los tableros
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.LightGray)
-        )
-        Text(text = name, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
-        Text(text = "$count pines", style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
-    }
-}
-
-@Composable
-fun EmptyStateMessage(message: String) {
-    Text(
-        text = message,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(32.dp)
-    )
 }

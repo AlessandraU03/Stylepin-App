@@ -49,6 +49,7 @@ import com.ale.stylepin.features.profile.presentation.screens.EditProfileScreen
 import com.ale.stylepin.features.boards.presentation.screens.BoardsScreen
 import com.ale.stylepin.features.boards.presentation.screens.BoardDetailScreen
 import com.ale.stylepin.features.boards.presentation.screens.CreateBoardScreen
+import com.ale.stylepin.features.boards.presentation.screens.EditBoardScreen
 import com.ale.stylepin.features.boards.presentation.viewmodels.BoardsViewModel
 
 @Composable
@@ -133,7 +134,12 @@ fun NavigationWrapper() {
                 PinsScreen(
                     viewModel = viewModel,
                     onNavigateToAddPin = { navController.navigate(AddPinRoute) },
-                    onNavigateToPinDetail = { pinId -> navController.navigate(PinDetailRoute(id = pinId)) }
+                    onNavigateToPinDetail = { pinId ->
+                        navController.navigate(PinDetailRoute(id = pinId))
+                    },
+                    onNavigateToEditPin = { pin ->
+                        navController.navigate(EditPinRoute(id = pin.id))
+                    }
                 )
             }
 
@@ -152,9 +158,8 @@ fun NavigationWrapper() {
                     pinId = route.id,
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
-                    onEditClick = { pinId -> navController.navigate(EditPinRoute(id = pinId)) },
-                    onUserClick = { userId ->
-                        // TODO: Aquí navegaremos al PublicProfileRoute en el próximo paso
+                    onNavigateToEditPin = { pin ->
+                        navController.navigate(EditPinRoute(id = pin.id))
                     }
                 )
             }
@@ -172,15 +177,17 @@ fun NavigationWrapper() {
             // --- BOARDS ---
             composable<BoardsRoute> {
                 val viewModel: BoardsViewModel = hiltViewModel()
-                // TODO: obtener el userId real del usuario autenticado
+                val pinsViewModel: PinsViewModel = hiltViewModel()
+                val pinsState by pinsViewModel.uiState.collectAsStateWithLifecycle()
+                
                 BoardsScreen(
-                    userId = "USER_ID",
+                    userId = pinsState.currentUserId ?: "",
                     viewModel = viewModel,
                     onNavigateToBoardDetail = { boardId ->
                         navController.navigate(BoardDetailRoute(id = boardId))
                     },
                     onNavigateToCreateBoard = {
-                        navController.navigate(CreateBoardRoute(userId = "USER_ID"))
+                        navController.navigate(CreateBoardRoute(userId = pinsState.currentUserId ?: ""))
                     },
                     onNavigateToEditBoard = { board ->
                         navController.navigate(EditBoardRoute(id = board.id))
@@ -194,7 +201,13 @@ fun NavigationWrapper() {
                 BoardDetailScreen(
                     boardId = route.id,
                     viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onPinClick = { pinId ->
+                        navController.navigate(PinDetailRoute(id = pinId))
+                    },
+                    onEditBoard = { boardId ->
+                        navController.navigate(EditBoardRoute(id = boardId))
+                    }
                 )
             }
 
@@ -203,6 +216,20 @@ fun NavigationWrapper() {
                 val viewModel: BoardsViewModel = hiltViewModel()
                 CreateBoardScreen(
                     userId = route.userId,
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<EditBoardRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<EditBoardRoute>()
+                val viewModel: BoardsViewModel = hiltViewModel()
+                val pinsViewModel: PinsViewModel = hiltViewModel()
+                val pinsState by pinsViewModel.uiState.collectAsStateWithLifecycle()
+                
+                EditBoardScreen(
+                    boardId = route.id,
+                    userId = pinsState.currentUserId ?: "",
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() }
                 )
@@ -235,10 +262,6 @@ fun NavigationWrapper() {
                         uiState.profile?.id?.let { userId ->
                             navController.navigate(CommunityRoute(initialTab = tabIndex, userId = userId))
                         }
-                    },
-                    // NUEVO: Atrapamos el clic y navegamos al detalle del pin
-                    onPinClick = { pinId ->
-                        navController.navigate(PinDetailRoute(id = pinId))
                     }
                 )
             }
