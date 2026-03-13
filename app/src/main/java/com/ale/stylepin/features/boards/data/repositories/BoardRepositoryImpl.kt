@@ -2,11 +2,7 @@ package com.ale.stylepin.features.boards.data.repositories
 
 import android.util.Log
 import com.ale.stylepin.features.boards.data.datasources.remote.api.BoardApi
-import com.ale.stylepin.features.boards.data.datasources.remote.mapper.toAddCollaboratorRequest
-import com.ale.stylepin.features.boards.data.datasources.remote.mapper.toAddPinRequest
-import com.ale.stylepin.features.boards.data.datasources.remote.mapper.toCreateBoardRequest
-import com.ale.stylepin.features.boards.data.datasources.remote.mapper.toDomain
-import com.ale.stylepin.features.boards.data.datasources.remote.mapper.toUpdateBoardRequest
+import com.ale.stylepin.features.boards.data.datasources.remote.mapper.*
 import com.ale.stylepin.features.boards.domain.entities.Board
 import com.ale.stylepin.features.boards.domain.entities.BoardCollaborator
 import com.ale.stylepin.features.boards.domain.entities.BoardPin
@@ -17,8 +13,12 @@ class BoardRepositoryImpl @Inject constructor(
     private val api: BoardApi
 ) : BoardsRepository {
 
+    override suspend fun getAllBoards(userId: String?): List<Board> {
+        return api.getAllBoards(userId).body()?.map { it.toDomain() } ?: emptyList()
+    }
+
     override suspend fun getUserBoards(userId: String): List<Board> {
-        return api.getUserBoards(userId).body()?.boards?.map { it.toDomain() } ?: emptyList()
+        return api.getUserBoards(userId).body()?.map { it.toDomain() } ?: emptyList()
     }
 
     override suspend fun getBoardById(boardId: String): Board {
@@ -87,6 +87,22 @@ class BoardRepositoryImpl @Inject constructor(
 
     override suspend fun removeCollaborator(boardId: String, collaboratorUserId: String): Boolean =
         api.removeCollaborator(boardId, collaboratorUserId).isSuccessful
+
+    override suspend fun updateCollaboratorPermissions(
+        boardId: String,
+        collaboratorUserId: String,
+        canEdit: Boolean,
+        canAddPins: Boolean,
+        canRemovePins: Boolean
+    ): BoardCollaborator {
+        val response = api.updateCollaboratorPermissions(
+            boardId,
+            collaboratorUserId,
+            toUpdateCollaboratorRequest(canEdit, canAddPins, canRemovePins)
+        )
+        return response.body()?.toDomain()
+            ?: throw Exception("Error ${response.code()} al actualizar permisos")
+    }
 
     companion object {
         private const val TAG = "BoardRepositoryImpl"

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.features.boards.domain.entities.Board
 import com.ale.stylepin.features.boards.domain.usecases.*
 import com.ale.stylepin.features.boards.presentation.screens.BoardsUiState
+import com.ale.stylepin.features.pins.domain.usecases.GetPinByIdUseCase
+import com.ale.stylepin.features.pins.domain.usecases.GetPinsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BoardsViewModel @Inject constructor(
+    private val getAllBoardsUseCase: GetAllBoardsUseCase,
     private val getUserBoardsUseCase: GetUserBoardsUseCase,
     private val getBoardByIdUseCase: GetBoardByIdUseCase,
     private val createBoardUseCase: CreateBoardUseCase,
@@ -25,13 +28,26 @@ class BoardsViewModel @Inject constructor(
     private val removePinFromBoardUseCase: RemovePinFromBoardUseCase,
     private val getCollaboratorsUseCase: GetCollaboratorsUseCase,
     private val addCollaboratorUseCase: AddCollaboratorUseCase,
-    private val removeCollaboratorUseCase: RemoveCollaboratorUseCase
+    private val removeCollaboratorUseCase: RemoveCollaboratorUseCase,
+    private val updateCollaboratorPermissionsUseCase: UpdateCollaboratorPermissionsUseCase,
+    private val getPinsUseCase: GetPinsUseCase,
+    private val getPinByIdUseCase: GetPinByIdUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BoardsUiState())
     val uiState: StateFlow<BoardsUiState> = _uiState.asStateFlow()
 
     // ── Lista ─────────────────────────────────────────────────
+
+    fun loadAllBoards(userId: String? = null) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            getAllBoardsUseCase(userId).fold(
+                onSuccess = { boards -> _uiState.update { it.copy(isLoading = false, boards = boards) } },
+                onFailure = { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
+            )
+        }
+    }
 
     fun loadUserBoards(userId: String) {
         viewModelScope.launch {
@@ -62,8 +78,29 @@ class BoardsViewModel @Inject constructor(
     private fun loadBoardPins(boardId: String) {
         viewModelScope.launch {
             getBoardPinsUseCase(boardId).fold(
-                onSuccess = { pins -> _uiState.update { it.copy(boardPins = pins) } },
+                onSuccess = { pins ->
+                    _uiState.update { it.copy(boardPins = pins) }
+                    pins.forEach { boardPin ->
+                        loadPinDetail(boardPin.pinId)
+                    }
+                },
                 onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
+            )
+        }
+    }
+
+    private fun loadPinDetail(pinId: String) {
+        if (_uiState.value.pinsDetails.containsKey(pinId)) return
+        viewModelScope.launch {
+            getPinByIdUseCase(pinId).fold(
+                onSuccess = { pin ->
+                    _uiState.update { state ->
+                        val updatedDetails = state.pinsDetails.toMutableMap()
+                        updatedDetails[pinId] = pin
+                        state.copy(pinsDetails = updatedDetails)
+                    }
+                },
+                onFailure = { }
             )
         }
     }
@@ -89,7 +126,7 @@ class BoardsViewModel @Inject constructor(
                 isPrivate = s.isPrivate,
                 isCollaborative = s.isCollaborative
             ).fold(
-                onSuccess = { resetForm(); loadUserBoards(userId); onSuccess() },
+                onSuccess = { resetForm(); loadAllBoards(); onSuccess() },
                 onFailure = { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
             )
         }
@@ -106,7 +143,7 @@ class BoardsViewModel @Inject constructor(
                 isPrivate = s.isPrivate,
                 isCollaborative = s.isCollaborative
             ).fold(
-                onSuccess = { resetForm(); loadUserBoards(userId); onSuccess() },
+                onSuccess = { resetForm(); loadAllBoards(); onSuccess() },
                 onFailure = { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
             )
         }
@@ -115,7 +152,7 @@ class BoardsViewModel @Inject constructor(
     fun deleteBoard(boardId: String, userId: String) {
         viewModelScope.launch {
             deleteBoardUseCase(boardId).fold(
-                onSuccess = { loadUserBoards(userId) },
+                onSuccess = { loadAllBoards() },
                 onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
             )
         }
@@ -123,11 +160,25 @@ class BoardsViewModel @Inject constructor(
 
     // ── Pins del tablero ──────────────────────────────────────
 
+    fun loadUserPins() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingUserPins = true, error = null) }
+            getPinsUseCase().fold(
+                onSuccess = { pins -> _uiState.update { it.copy(isLoadingUserPins = false, userPins = pins) } },
+                onFailure = { e -> _uiState.update { it.copy(isLoadingUserPins = false, error = e.message) } }
+            )
+        }
+    }
+
     fun addPinToBoard(boardId: String, pinId: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             val notes = _uiState.value.addPinNotes.takeIf { it.isNotBlank() }
             addPinToBoardUseCase(boardId, pinId, notes).fold(
-                onSuccess = { _uiState.update { it.copy(addPinNotes = "") }; loadBoardPins(boardId); onSuccess() },
+                onSuccess = {
+                    _uiState.update { it.copy(addPinNotes = "") }
+                    loadBoardPins(boardId)
+                    onSuccess()
+                },
                 onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
             )
         }
@@ -144,10 +195,13 @@ class BoardsViewModel @Inject constructor(
 
     // ── Colaboradores ─────────────────────────────────────────
 
-    fun addCollaborator(boardId: String, userId: String, canEdit: Boolean, canAddPins: Boolean, canRemovePins: Boolean) {
+    fun addCollaborator(boardId: String, userId: String, canEdit: Boolean, canAddPins: Boolean, canRemovePins: Boolean, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             addCollaboratorUseCase(boardId, userId, canEdit, canAddPins, canRemovePins).fold(
-                onSuccess = { loadCollaborators(boardId) },
+                onSuccess = { 
+                    loadCollaborators(boardId)
+                    onSuccess()
+                },
                 onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
             )
         }
@@ -157,6 +211,25 @@ class BoardsViewModel @Inject constructor(
         viewModelScope.launch {
             removeCollaboratorUseCase(boardId, collaboratorUserId).fold(
                 onSuccess = { loadCollaborators(boardId) },
+                onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
+            )
+        }
+    }
+
+    fun updateCollaboratorPermissions(
+        boardId: String,
+        collaboratorUserId: String,
+        canEdit: Boolean,
+        canAddPins: Boolean,
+        canRemovePins: Boolean,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            updateCollaboratorPermissionsUseCase(boardId, collaboratorUserId, canEdit, canAddPins, canRemovePins).fold(
+                onSuccess = {
+                    loadCollaborators(boardId)
+                    onSuccess()
+                },
                 onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
             )
         }

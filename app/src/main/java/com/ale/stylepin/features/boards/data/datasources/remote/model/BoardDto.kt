@@ -9,7 +9,7 @@ data class BoardDto(
     val id: String,
     val user_id: String,
     val user_username: String,
-    val user_full_name: String,
+    val user_full_name: String? = null,
     val user_avatar_url: String? = null,
     val name: String,
     val description: String? = null,
@@ -18,7 +18,7 @@ data class BoardDto(
     val is_collaborative: Boolean = false,
     val pins_count: Int = 0,
     val created_at: String,
-    val updated_at: String,
+    val updated_at: String? = null,
     val is_owner: Boolean = false,
     val is_collaborator: Boolean = false
 )
@@ -98,6 +98,13 @@ data class AddPinToBoardRequest(
 @Serializable
 data class AddCollaboratorRequest(
     val user_id: String,
+    val can_edit: Boolean = false,
+    val can_add_pins: Boolean = true,
+    val can_remove_pins: Boolean = false
+)
+
+@Serializable
+data class UpdateCollaboratorRequest(
     val can_edit: Boolean = false,
     val can_add_pins: Boolean = true,
     val can_remove_pins: Boolean = false

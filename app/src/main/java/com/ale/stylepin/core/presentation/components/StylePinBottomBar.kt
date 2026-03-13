@@ -36,7 +36,7 @@ fun StylePinBottomBar(
     // Usamos el nombre de las clases serializables como referencia
     val items = listOf(
         BottomNavItem("Inicio", Icons.Filled.Home, Icons.Outlined.Home, "com.ale.stylepin.core.navigation.PinsRoute"),
-        BottomNavItem("Explorar", Icons.Filled.Search, Icons.Outlined.Search, "com.ale.stylepin.core.navigation.SearchRoute"),
+        BottomNavItem("Explorar", Icons.Filled.Search, Icons.Outlined.Search, "com.ale.stylepin.core.navigation.BoardsRoute"),
         // Espacio para el FAB central
         BottomNavItem("", Icons.Default.Home, Icons.Default.Home, "dummy"),
         BottomNavItem("Alertas", Icons.Filled.Notifications, Icons.Outlined.Notifications, "com.ale.stylepin.core.navigation.AlertsRoute"),

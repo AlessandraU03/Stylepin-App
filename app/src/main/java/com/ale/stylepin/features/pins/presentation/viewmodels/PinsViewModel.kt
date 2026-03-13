@@ -2,6 +2,7 @@ package com.ale.stylepin.features.pins.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ale.stylepin.core.network.StylePinWebSocketManager
 import com.ale.stylepin.features.pins.domain.entities.Pin
 import com.ale.stylepin.features.pins.domain.usecases.AddPinsUseCase
 import com.ale.stylepin.features.pins.domain.usecases.DeletePinsUseCase
@@ -23,13 +24,23 @@ class PinsViewModel @Inject constructor(
     private val getPinByIdUseCase: GetPinByIdUseCase,
     private val addPinUseCase: AddPinsUseCase,
     private val updatePinUseCase: UpdatePinsUseCase,
-    private val deletePinUseCase: DeletePinsUseCase
+    private val deletePinUseCase: DeletePinsUseCase,
+    val webSocketManager: StylePinWebSocketManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PinsUiState())
     val uiState: StateFlow<PinsUiState> = _uiState.asStateFlow()
 
-    init { loadPins() }
+    init {
+        loadPins()
+        webSocketManager.connect()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Opcional: Desconectar si solo quieres WS mientras ves Pins
+        // webSocketManager.disconnect()
+    }
 
     // ─────────────────────────────────────────────────────────
     // Lista

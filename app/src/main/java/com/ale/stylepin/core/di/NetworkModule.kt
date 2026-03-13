@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.ale.stylepin.BuildConfig
 import com.ale.stylepin.core.network.AuthInterceptor
+import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,6 +33,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    fun provideGson(): Gson = Gson()
+
+    @Provides
+    @Singleton
     fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
@@ -42,7 +47,6 @@ object NetworkModule {
     @Singleton
     @StylePinRetrofit
     fun provideStylePinRetrofit(okHttpClient: OkHttpClient): Retrofit {
-        // Asegúrate de que BASE_URL_STYLEPIN esté en tu BuildConfig o usa un string directo
         return Retrofit.Builder()
             .baseUrl(BuildConfig.BASE_URL_STYLEPIN)
             .client(okHttpClient)

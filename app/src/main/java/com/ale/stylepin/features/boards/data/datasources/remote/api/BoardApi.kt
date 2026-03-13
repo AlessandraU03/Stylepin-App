@@ -1,26 +1,24 @@
 package com.ale.stylepin.features.boards.data.datasources.remote.api
 
-import com.ale.stylepin.features.boards.data.datasources.remote.model.AddCollaboratorRequest
-import com.ale.stylepin.features.boards.data.datasources.remote.model.AddPinToBoardRequest
-import com.ale.stylepin.features.boards.data.datasources.remote.model.BoardCollaboratorResponse
-import com.ale.stylepin.features.boards.data.datasources.remote.model.BoardListResponse
-import com.ale.stylepin.features.boards.data.datasources.remote.model.BoardPinListResponse
-import com.ale.stylepin.features.boards.data.datasources.remote.model.BoardPinResponse
-import com.ale.stylepin.features.boards.data.datasources.remote.model.BoardDto
-import com.ale.stylepin.features.boards.data.datasources.remote.model.CollaboratorListResponse
-import com.ale.stylepin.features.boards.data.datasources.remote.model.CreateBoardRequest
-import com.ale.stylepin.features.boards.data.datasources.remote.model.UpdateBoardRequest
+import com.ale.stylepin.features.boards.data.datasources.remote.model.*
 import retrofit2.Response
 import retrofit2.http.*
 
 interface BoardApi {
+
+    @GET("api/v1/boards")
+    suspend fun getAllBoards(
+        @Query("user_id") userId: String? = null,
+        @Query("limit") limit: Int = 20,
+        @Query("offset") offset: Int = 0
+    ): Response<List<BoardDto>>
 
     @GET("api/v1/boards/user/{user_id}")
     suspend fun getUserBoards(
         @Path("user_id") userId: String,
         @Query("limit") limit: Int = 20,
         @Query("offset") offset: Int = 0
-    ): Response<BoardListResponse>
+    ): Response<List<BoardDto>>
 
     @GET("api/v1/boards/{board_id}")
     suspend fun getBoardById(
@@ -78,4 +76,11 @@ interface BoardApi {
         @Path("board_id") boardId: String,
         @Path("collaborator_user_id") collaboratorUserId: String
     ): Response<Unit>
+
+    @PUT("api/v1/boards/{board_id}/collaborators/{collaborator_user_id}")
+    suspend fun updateCollaboratorPermissions(
+        @Path("board_id") boardId: String,
+        @Path("collaborator_user_id") collaboratorUserId: String,
+        @Body request: UpdateCollaboratorRequest
+    ): Response<BoardCollaboratorResponse>
 }

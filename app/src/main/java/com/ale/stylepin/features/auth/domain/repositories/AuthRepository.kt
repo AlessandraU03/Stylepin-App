@@ -12,4 +12,8 @@ interface AuthRepository {
         fullName: String,
         gender: String
     ): UserToken
+
+    fun getStoredToken(): String?
+    fun hasStoredToken(): Boolean
+    fun clearToken()
 }

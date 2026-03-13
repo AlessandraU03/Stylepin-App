@@ -46,6 +46,18 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getStoredToken(): String? {
+        return prefs.getString("auth_token", null)
+    }
+
+    override fun hasStoredToken(): Boolean {
+        return !prefs.getString("auth_token", null).isNullOrEmpty()
+    }
+
+    override fun clearToken() {
+        prefs.edit().remove("auth_token").apply()
+    }
+
     private fun parseErrorMessage(exception: HttpException): String {
         val code = exception.code()
         if (code == 401) return "Usuario o contraseña incorrectos."
