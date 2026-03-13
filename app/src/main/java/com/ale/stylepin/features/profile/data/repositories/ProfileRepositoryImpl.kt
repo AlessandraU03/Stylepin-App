@@ -2,10 +2,14 @@ package com.ale.stylepin.features.profile.data.repositories
 
 import android.util.Log
 import com.ale.stylepin.features.profile.data.datasources.remote.api.ProfileApi
+import com.ale.stylepin.features.profile.data.datasources.remote.mapper.toDomain
 import com.ale.stylepin.features.profile.data.datasources.remote.mapper.mapToDomain
 import com.ale.stylepin.features.profile.data.datasources.remote.model.UpdateProfileRequest
 import com.ale.stylepin.features.profile.data.datasources.remote.model.UserStatsDto
 import com.ale.stylepin.features.profile.domain.entities.Profile
+import com.ale.stylepin.features.profile.domain.entities.ProfileBoard
+import com.ale.stylepin.features.profile.domain.entities.ProfilePin
+import com.ale.stylepin.features.profile.domain.entities.ProfileSavedPin
 import com.ale.stylepin.features.profile.domain.repositories.ProfileRepository
 import javax.inject.Inject
 
@@ -29,7 +33,7 @@ class ProfileRepositoryImpl @Inject constructor(
             val request = UpdateProfileRequest(
                 fullName = fullName.trim(),
                 bio = bio.trim(),
-                gender = gender, // Lo enviamos a la API
+                gender = gender,
                 avatarUrl = null,
                 preferredStyles = null
             )
@@ -38,5 +42,26 @@ class ProfileRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    override suspend fun getUserPins(userId: String): Result<List<ProfilePin>> {
+        return try {
+            val response = api.getUserPins(userId)
+            Result.success(response.pins.map { it.toDomain() })
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    override suspend fun getUserBoards(userId: String): Result<List<ProfileBoard>> {
+        return try {
+            val response = api.getUserBoards(userId)
+            Result.success(response.boards.map { it.toDomain() })
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    override suspend fun getUserSavedPins(userId: String): Result<List<ProfileSavedPin>> {
+        return try {
+            val response = api.getUserLikes(userId)
+            Result.success(response.likes.map { it.toDomain() })
+        } catch (e: Exception) { Result.failure(e) }
     }
 }

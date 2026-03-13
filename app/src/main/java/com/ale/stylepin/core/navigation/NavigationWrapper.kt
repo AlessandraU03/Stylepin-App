@@ -156,7 +156,11 @@ fun NavigationWrapper() {
                 PinDetailScreen(
                     pinId = route.id,
                     viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    // ¡AQUÍ NAVEGAMOS A EDITAR!
+                    onEditClick = { pinId ->
+                        navController.navigate(EditPinRoute(id = pinId))
+                    }
                 )
             }
 
@@ -236,6 +240,10 @@ fun NavigationWrapper() {
                         uiState.profile?.id?.let { userId ->
                             navController.navigate(CommunityRoute(initialTab = tabIndex, userId = userId))
                         }
+                    },
+                    // NUEVO: Atrapamos el clic y navegamos al detalle del pin
+                    onPinClick = { pinId ->
+                        navController.navigate(PinDetailRoute(id = pinId))
                     }
                 )
             }
