@@ -6,11 +6,7 @@ import javax.inject.Inject
 class DeletePinsUseCase @Inject constructor(
     private val repository: PinsRepository
 ) {
-    suspend operator fun invoke(pinId: String): Result<Boolean> {
-        return try {
-            Result.success(repository.deletePin(pinId))
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    suspend operator fun invoke(pinId: String): Result<Boolean> = runCatching {
+        repository.deletePin(pinId)
     }
 }

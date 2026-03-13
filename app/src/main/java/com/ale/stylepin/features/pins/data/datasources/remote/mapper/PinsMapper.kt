@@ -1,20 +1,15 @@
 package com.ale.stylepin.features.pins.data.datasources.remote.mapper
 
-import com.ale.stylepin.features.pins.data.datasources.remote.model.AddPinRequest
-import com.ale.stylepin.features.pins.data.datasources.remote.model.PinResponse
-import com.ale.stylepin.features.pins.data.datasources.remote.model.UpdatePinRequest
+import com.ale.stylepin.features.pins.data.datasources.remote.model.PinDto
+import com.ale.stylepin.features.pins.data.datasources.remote.model.UpdatePinDto
 import com.ale.stylepin.features.pins.domain.entities.Pin
-import com.ale.stylepin.features.pins.domain.entities.PinCreate
-import com.ale.stylepin.features.pins.domain.entities.PinUpdate
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
-// ─────────────────────────────────────────────────────────────
-// API Response → Domain Entity
-// ─────────────────────────────────────────────────────────────
+// ── API Response → Domain ─────────────────────────────────────
 
-fun PinResponse.toDomain(): Pin = Pin(
+fun PinDto.toDomain(): Pin = Pin(
     id = id,
     userId = user_id,
     username = user_username,
@@ -45,62 +40,57 @@ fun PinResponse.toDomain(): Pin = Pin(
     isSavedByMe = is_saved_by_me
 )
 
-// ─────────────────────────────────────────────────────────────
-// Domain Entity → Data DTO
-// Estas conversiones viven en data, no en dominio,
-// para no contaminar las entidades con OkHttp.
-// ─────────────────────────────────────────────────────────────
+// ── Domain params → UpdatePinRequest ─────────────────────────
 
-fun PinCreate.toCreateDto(): AddPinRequest = AddPinRequest(
-    title = title,
-    imageUrl = imageUrl,
-    category = category,
-    season = season,
-    description = description,
-    isPrivate = isPrivate,
-    styles = styles,
-    occasions = occasions,
-    brands = brands,
-    priceRange = priceRange,
-    whereToBuy = whereToBuy,
-    purchaseLink = purchaseLink,
-    colors = colors,
-    tags = tags
-)
-
-fun PinUpdate.toUpdateDto(): UpdatePinRequest = UpdatePinRequest(
+fun toUpdateRequest(
+    pinId: String,
+    title: String,
+    description: String?,
+    category: String,
+    season: String,
+    isPrivate: Boolean,
+    imageUrl: String?,
+): UpdatePinDto = UpdatePinDto(
     pinId = pinId,
     title = title,
-    imageUrl = imageUrl,
+    description = description,
     category = category,
     season = season,
-    description = description,
-    isPrivate = isPrivate
+    isPrivate = isPrivate,
+    imageUrl = imageUrl
 )
 
-// ─────────────────────────────────────────────────────────────
-// Data DTO → OkHttp RequestBody map
-// La lógica de multipart vive aquí, lejos del repositorio.
-// ─────────────────────────────────────────────────────────────
+// ── Multipart map para crear pin ──────────────────────────────
 
-fun AddPinRequest.toPartMap(): Map<String, RequestBody> {
-    val plainText = "text/plain".toMediaTypeOrNull()
-    val map = mutableMapOf<String, RequestBody>()
-
-    map["title"] = title.toRequestBody(plainText)
-    map["category"] = category.toRequestBody(plainText)
-    map["season"] = season.ifBlank { "todo_el_ano" }.toRequestBody(plainText)
-    map["description"] = (description ?: "").toRequestBody(plainText)
-    map["is_private"] = isPrivate.toString().toRequestBody(plainText)
-    map["price_range"] = priceRange.ifBlank { "bajo_500" }.toRequestBody(plainText)
-    map["styles"] = styles.joinToString(",", "[", "]").toRequestBody(plainText)
-    map["occasions"] = occasions.joinToString(",", "[", "]").toRequestBody(plainText)
-    map["brands"] = brands.joinToString(",", "[", "]").toRequestBody(plainText)
-    map["colors"] = colors.joinToString(",", "[", "]").toRequestBody(plainText)
-    map["tags"] = tags.joinToString(",", "[", "]").toRequestBody(plainText)
-    map["where_to_buy"] = (whereToBuy ?: "").toRequestBody(plainText)
-    map["purchase_link"] = (purchaseLink ?: "").toRequestBody(plainText)
-
-    return map
+fun buildPartMap(
+    title: String,
+    category: String,
+    season: String,
+    description: String?,
+    isPrivate: Boolean,
+    styles: List<String>,
+    occasions: List<String>,
+    brands: List<String>,
+    priceRange: String,
+    whereToBuy: String?,
+    purchaseLink: String?,
+    colors: List<String>,
+    tags: List<String>
+): Map<String, RequestBody> {
+    val plain = "text/plain".toMediaTypeOrNull()
+    return buildMap {
+        put("title", title.toRequestBody(plain))
+        put("category", category.toRequestBody(plain))
+        put("season", season.ifBlank { "todo_el_ano" }.toRequestBody(plain))
+        put("description", (description ?: "").toRequestBody(plain))
+        put("is_private", isPrivate.toString().toRequestBody(plain))
+        put("price_range", priceRange.ifBlank { "bajo_500" }.toRequestBody(plain))
+        put("styles", styles.joinToString(",", "[", "]").toRequestBody(plain))
+        put("occasions", occasions.joinToString(",", "[", "]").toRequestBody(plain))
+        put("brands", brands.joinToString(",", "[", "]").toRequestBody(plain))
+        put("colors", colors.joinToString(",", "[", "]").toRequestBody(plain))
+        put("tags", tags.joinToString(",", "[", "]").toRequestBody(plain))
+        put("where_to_buy", (whereToBuy ?: "").toRequestBody(plain))
+        put("purchase_link", (purchaseLink ?: "").toRequestBody(plain))
+    }
 }
-
