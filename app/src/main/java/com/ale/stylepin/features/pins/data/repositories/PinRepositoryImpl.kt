@@ -144,4 +144,29 @@ class PinRepositoryImpl @Inject constructor(
     companion object {
         private const val TAG = "PinRepositoryImpl"
     }
+
+    override suspend fun toggleLike(pinId: String, isCurrentlyLiked: Boolean): Boolean {
+        return try {
+            val response = if (isCurrentlyLiked) {
+                api.unlikePin(pinId)
+            } else {
+                api.likePin(com.ale.stylepin.features.pins.data.datasources.remote.model.LikeRequest(pinId))
+            }
+            response.isSuccessful
+        } catch (e: Exception) { false }
+    }
+
+    override suspend fun getComments(pinId: String): List<com.ale.stylepin.features.pins.data.datasources.remote.model.CommentDto> {
+        return try {
+            val response = api.getComments(pinId)
+            response.body()?.comments ?: emptyList()
+        } catch (e: Exception) { emptyList() }
+    }
+
+    override suspend fun addComment(pinId: String, text: String): Boolean {
+        return try {
+            val request = com.ale.stylepin.features.pins.data.datasources.remote.model.CreateCommentRequest(pinId, text)
+            api.addComment(request).isSuccessful
+        } catch (e: Exception) { false }
+    }
 }

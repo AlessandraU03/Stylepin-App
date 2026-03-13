@@ -133,12 +133,7 @@ fun NavigationWrapper() {
                 PinsScreen(
                     viewModel = viewModel,
                     onNavigateToAddPin = { navController.navigate(AddPinRoute) },
-                    onNavigateToPinDetail = { pinId ->
-                        navController.navigate(PinDetailRoute(id = pinId))
-                    },
-                    onNavigateToEditPin = { pin ->
-                        navController.navigate(EditPinRoute(id = pin.id))
-                    }
+                    onNavigateToPinDetail = { pinId -> navController.navigate(PinDetailRoute(id = pinId)) }
                 )
             }
 
@@ -157,9 +152,9 @@ fun NavigationWrapper() {
                     pinId = route.id,
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
-                    // ¡AQUÍ NAVEGAMOS A EDITAR!
-                    onEditClick = { pinId ->
-                        navController.navigate(EditPinRoute(id = pinId))
+                    onEditClick = { pinId -> navController.navigate(EditPinRoute(id = pinId)) },
+                    onUserClick = { userId ->
+                        // TODO: Aquí navegaremos al PublicProfileRoute en el próximo paso
                     }
                 )
             }
