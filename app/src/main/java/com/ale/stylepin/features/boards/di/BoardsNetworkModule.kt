@@ -1,4 +1,4 @@
-package com.ale.stylepin.features.pins.di
+package com.ale.stylepin.features.boards.di
 
 import com.ale.stylepin.core.di.StylePinRetrofit
 import com.ale.stylepin.features.boards.data.datasources.remote.api.BoardApi

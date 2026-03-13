@@ -20,7 +20,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 
-// Imports de tus pantallas y componentes
 import com.ale.stylepin.core.presentation.components.StylePinBottomBar
 import com.ale.stylepin.features.auth.presentation.screens.LoginScreen
 import com.ale.stylepin.features.auth.presentation.screens.RegisterScreen
@@ -31,21 +30,14 @@ import com.ale.stylepin.features.pins.presentation.screens.EditPinScreen
 import com.ale.stylepin.features.pins.presentation.screens.PinDetailScreen
 import com.ale.stylepin.features.pins.presentation.screens.PinsScreen
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
-
-// Imports de Profile y Settings
 import com.ale.stylepin.features.profile.presentation.screens.ProfileScreen
 import com.ale.stylepin.features.profile.presentation.screens.SettingsScreen
 import com.ale.stylepin.features.profile.presentation.viewmodels.ProfileViewModel
 import com.ale.stylepin.features.profile.presentation.viewmodels.SettingsViewModel
-
-// Imports de Community
 import com.ale.stylepin.features.community.presentation.screens.CommunityScreen
 import com.ale.stylepin.features.community.presentation.viewmodels.CommunityViewModel
-
 import com.ale.stylepin.features.profile.presentation.viewmodels.EditProfileViewModel
 import com.ale.stylepin.features.profile.presentation.screens.EditProfileScreen
-
-// Imports de Boards
 import com.ale.stylepin.features.boards.presentation.screens.BoardsScreen
 import com.ale.stylepin.features.boards.presentation.screens.BoardDetailScreen
 import com.ale.stylepin.features.boards.presentation.screens.CreateBoardScreen
@@ -87,9 +79,7 @@ fun NavigationWrapper() {
                     shape = CircleShape,
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.White
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Agregar Pin")
-                }
+                ) { Icon(Icons.Default.Add, contentDescription = "Agregar Pin") }
             }
         },
         floatingActionButtonPosition = FabPosition.Center
@@ -101,206 +91,89 @@ fun NavigationWrapper() {
             modifier = Modifier.padding(innerPadding)
         ) {
 
-            // --- AUTH ---
             composable<LoginRoute> {
                 val viewModel: LoginViewModel = hiltViewModel()
-                LoginScreen(
-                    viewModel = viewModel,
-                    onLoginSuccess = {
-                        navController.navigate(PinsRoute) {
-                            popUpTo(LoginRoute) { inclusive = true }
-                        }
-                    },
-                    onNavigateToRegister = { navController.navigate(RegisterRoute) }
-                )
+                LoginScreen(viewModel = viewModel, onLoginSuccess = { navController.navigate(PinsRoute) { popUpTo(LoginRoute) { inclusive = true } } }, onNavigateToRegister = { navController.navigate(RegisterRoute) })
             }
-
             composable<RegisterRoute> {
                 val viewModel: RegisterViewModel = hiltViewModel()
-                RegisterScreen(
-                    viewModel = viewModel,
-                    onRegisterSuccess = {
-                        navController.navigate(PinsRoute) {
-                            popUpTo(RegisterRoute) { inclusive = true }
-                        }
-                    },
-                    onNavigateToLogin = { navController.popBackStack() }
-                )
+                RegisterScreen(viewModel = viewModel, onRegisterSuccess = { navController.navigate(PinsRoute) { popUpTo(RegisterRoute) { inclusive = true } } }, onNavigateToLogin = { navController.popBackStack() })
             }
 
-            // --- PINS ---
             composable<PinsRoute> {
                 val viewModel: PinsViewModel = hiltViewModel()
-                PinsScreen(
-                    viewModel = viewModel,
-                    onNavigateToAddPin = { navController.navigate(AddPinRoute) },
-                    onNavigateToPinDetail = { pinId ->
-                        navController.navigate(PinDetailRoute(id = pinId))
-                    },
-                    onNavigateToEditPin = { pin ->
-                        navController.navigate(EditPinRoute(id = pin.id))
-                    }
-                )
+                PinsScreen(viewModel = viewModel, onNavigateToAddPin = { navController.navigate(AddPinRoute) }, onNavigateToPinDetail = { pinId -> navController.navigate(PinDetailRoute(id = pinId)) })
             }
-
             composable<AddPinRoute> {
                 val viewModel: PinsViewModel = hiltViewModel()
-                AddPinScreen(
-                    viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
-                )
+                AddPinScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
             }
-
             composable<PinDetailRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<PinDetailRoute>()
                 val viewModel: PinsViewModel = hiltViewModel()
                 PinDetailScreen(
-                    pinId = route.id,
-                    viewModel = viewModel,
-                    onBack = { navController.popBackStack() },
-                    onNavigateToEditPin = { pin ->
-                        navController.navigate(EditPinRoute(id = pin.id))
-                    }
+                    pinId = route.id, viewModel = viewModel, onBack = { navController.popBackStack() },
+                    onEditClick = { pinId -> navController.navigate(EditPinRoute(id = pinId)) },
+                    onUserClick = { userId -> navController.navigate(PublicProfileRoute(userId = userId)) }
                 )
             }
-
             composable<EditPinRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<EditPinRoute>()
                 val viewModel: PinsViewModel = hiltViewModel()
-                EditPinScreen(
-                    pinId = route.id,
-                    viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
-                )
+                EditPinScreen(pinId = route.id, viewModel = viewModel, onBack = { navController.popBackStack() })
             }
 
-            // --- BOARDS ---
             composable<BoardsRoute> {
                 val viewModel: BoardsViewModel = hiltViewModel()
                 val pinsViewModel: PinsViewModel = hiltViewModel()
                 val pinsState by pinsViewModel.uiState.collectAsStateWithLifecycle()
-                
-                BoardsScreen(
-                    userId = pinsState.currentUserId ?: "",
-                    viewModel = viewModel,
-                    onNavigateToBoardDetail = { boardId ->
-                        navController.navigate(BoardDetailRoute(id = boardId))
-                    },
-                    onNavigateToCreateBoard = {
-                        navController.navigate(CreateBoardRoute(userId = pinsState.currentUserId ?: ""))
-                    },
-                    onNavigateToEditBoard = { board ->
-                        navController.navigate(EditBoardRoute(id = board.id))
-                    }
-                )
+                BoardsScreen(userId = pinsState.currentUserId ?: "", viewModel = viewModel, onNavigateToBoardDetail = { boardId -> navController.navigate(BoardDetailRoute(id = boardId)) }, onNavigateToCreateBoard = { navController.navigate(CreateBoardRoute(userId = pinsState.currentUserId ?: "")) }, onNavigateToEditBoard = { board -> navController.navigate(EditBoardRoute(id = board.id)) })
             }
-
             composable<BoardDetailRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<BoardDetailRoute>()
                 val viewModel: BoardsViewModel = hiltViewModel()
-                BoardDetailScreen(
-                    boardId = route.id,
-                    viewModel = viewModel,
-                    onBack = { navController.popBackStack() },
-                    onPinClick = { pinId ->
-                        navController.navigate(PinDetailRoute(id = pinId))
-                    },
-                    onEditBoard = { boardId ->
-                        navController.navigate(EditBoardRoute(id = boardId))
-                    }
-                )
+                BoardDetailScreen(boardId = route.id, viewModel = viewModel, onBack = { navController.popBackStack() }, onPinClick = { pinId -> navController.navigate(PinDetailRoute(id = pinId)) }, onEditBoard = { boardId -> navController.navigate(EditBoardRoute(id = boardId)) })
             }
-
             composable<CreateBoardRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<CreateBoardRoute>()
                 val viewModel: BoardsViewModel = hiltViewModel()
-                CreateBoardScreen(
-                    userId = route.userId,
-                    viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
-                )
+                CreateBoardScreen(userId = route.userId, viewModel = viewModel, onBack = { navController.popBackStack() })
             }
-
             composable<EditBoardRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<EditBoardRoute>()
                 val viewModel: BoardsViewModel = hiltViewModel()
                 val pinsViewModel: PinsViewModel = hiltViewModel()
                 val pinsState by pinsViewModel.uiState.collectAsStateWithLifecycle()
-                
-                EditBoardScreen(
-                    boardId = route.id,
-                    userId = pinsState.currentUserId ?: "",
-                    viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
-                )
+                EditBoardScreen(boardId = route.id, userId = pinsState.currentUserId ?: "", viewModel = viewModel, onBack = { navController.popBackStack() })
             }
 
-            // --- PLACEHOLDERS / OTROS ---
-            composable<SearchRoute> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Pantalla de Explorar")
-                }
+            // Aquí entrará la de Perfil Público después
+            composable<PublicProfileRoute> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Perfil Público (Próximamente)") }
             }
 
-            composable<AlertsRoute> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Pantalla de Alertas")
-                }
-            }
-
-            // --- PROFILE Y COMMUNITY ---
             composable<ProfileRoute> {
                 val viewModel: ProfileViewModel = hiltViewModel()
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-                ProfileScreen(
-                    viewModel = viewModel,
-                    onBack = { navController.popBackStack() },
-                    onEditProfileClick = { navController.navigate(EditProfileRoute) },
-                    onSettingsClick = { navController.navigate(SettingsRoute) },
-                    onCommunityClick = { tabIndex ->
-                        uiState.profile?.id?.let { userId ->
-                            navController.navigate(CommunityRoute(initialTab = tabIndex, userId = userId))
-                        }
-                    }
-                )
+                ProfileScreen(viewModel = viewModel, onBack = { navController.popBackStack() }, onEditProfileClick = { navController.navigate(EditProfileRoute) }, onSettingsClick = { navController.navigate(SettingsRoute) }, onCommunityClick = { tabIndex -> uiState.profile?.id?.let { userId -> navController.navigate(CommunityRoute(initialTab = tabIndex, userId = userId)) } }, onPinClick = { pinId -> navController.navigate(PinDetailRoute(id = pinId)) })
             }
-
             composable<EditProfileRoute> {
                 val viewModel: EditProfileViewModel = hiltViewModel()
-                EditProfileScreen(
-                    viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
-                )
+                EditProfileScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
             }
-
             composable<SettingsRoute> {
                 val viewModel: SettingsViewModel = hiltViewModel()
-                SettingsScreen(
-                    onBack = { navController.popBackStack() },
-                    onLogout = {
-                        viewModel.logout()
-                        navController.navigate(LoginRoute) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                )
+                SettingsScreen(onBack = { navController.popBackStack() }, onLogout = { viewModel.logout(); navController.navigate(LoginRoute) { popUpTo(0) { inclusive = true } } })
             }
-
             composable<CommunityRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<CommunityRoute>()
                 val viewModel: CommunityViewModel = hiltViewModel()
-
-                LaunchedEffect(route.userId) {
-                    viewModel.loadData(route.userId)
-                }
-
-                CommunityScreen(
-                    initialTab = route.initialTab,
-                    viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
-                )
+                LaunchedEffect(route.userId) { viewModel.loadData(route.userId) }
+                CommunityScreen(initialTab = route.initialTab, viewModel = viewModel, onBack = { navController.popBackStack() })
             }
+
+            composable<SearchRoute> { Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Pantalla de Explorar") } }
+            composable<AlertsRoute> { Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Pantalla de Alertas") } }
         }
     }
 }

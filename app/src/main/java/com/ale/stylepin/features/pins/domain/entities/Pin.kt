@@ -30,3 +30,13 @@ data class Pin(
     val isLikedByMe: Boolean,
     val isSavedByMe: Boolean
 )
+
+data class Comment(
+    val id: String,
+    val userId: String,
+    val userUsername: String,
+    val userFullName: String?,
+    val userAvatarUrl: String?,
+    val text: String,
+    val createdAt: String
+)

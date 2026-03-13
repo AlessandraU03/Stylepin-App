@@ -1,8 +1,7 @@
 package com.ale.stylepin.features.pins.data.datasources.remote.model
 
+import com.google.gson.annotations.SerializedName
 import kotlinx.serialization.Serializable
-
-// ── Responses ─────────────────────────────────────────────
 
 @Serializable
 data class PinDto(
@@ -45,8 +44,6 @@ data class PinsListResponse(
     val has_more: Boolean = false
 )
 
-// ── Request ───────────────────────────────────────────────
-
 @Serializable
 data class UpdatePinDto(
     val pinId: String,
@@ -58,39 +55,22 @@ data class UpdatePinDto(
     val isPrivate: Boolean
 )
 
-@Serializable
-data class PinsFeedDto(
-    val pins: List<PinDto>,
-    val limit: Int,
-    val offset: Int,
-    val has_more: Boolean
+// --- MODELOS DE COMENTARIOS ---
+data class CreateCommentRequest(
+    @SerializedName("pin_id") val pinId: String,
+    val text: String
 )
 
-@Serializable
-data class AddPinDto(
-    val title: String,
-    val imageUrl: String,
-    val category: String,
-    val season: String,
-    val description: String?,
-    val isPrivate: Boolean,
-    val styles: List<String>,
-    val occasions: List<String>,
-    val brands: List<String>,
-    val priceRange: String,
-    val whereToBuy: String?,
-    val purchaseLink: String?,
-    val colors: List<String>,
-    val tags: List<String>
+data class CommentDto(
+    val id: String,
+    @SerializedName("user_id") val userId: String,
+    @SerializedName("user_username") val userUsername: String,
+    @SerializedName("user_full_name") val userFullName: String?,
+    @SerializedName("user_avatar_url") val userAvatarUrl: String?,
+    val text: String,
+    @SerializedName("created_at") val createdAt: String
 )
 
-
-@Serializable
-data class PinsTrendingDto(
-    val pins: List<PinDto>,
-    val hours: Int
-)
-
-data class MessageResponse(
-    val message: String
+data class CommentListResponse(
+    val comments: List<CommentDto>
 )

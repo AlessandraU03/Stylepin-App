@@ -1,16 +1,18 @@
 package com.ale.stylepin.features.pins.presentation.screens
 
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,11 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.ale.stylepin.features.pins.domain.entities.Pin
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,76 +33,122 @@ fun PinDetailScreen(
     pinId: String,
     viewModel: PinsViewModel,
     onBack: () -> Unit,
-    onNavigateToEditPin: (Pin) -> Unit
+    onEditClick: (String) -> Unit,
+    onUserClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showBoardsDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(pinId) {
-        viewModel.loadPinById(pinId)
-    }
+    LaunchedEffect(pinId) { viewModel.loadPinById(pinId) }
 
-    if (showDeleteDialog) {
+    val pin = uiState.pinDetail
+    val isOwner = pin?.userId == uiState.currentUserId
+
+    if (showDeleteDialog && pin != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("¿Eliminar Pin?") },
-            text = { Text("Esta acción eliminará el outfit permanentemente de tu cuenta.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deletePin(pinId)
-                    showDeleteDialog = false
-                    onBack()
-                }) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+            title = { Text("¿Eliminar Pin?") }, text = { Text("No se puede deshacer.") },
+            confirmButton = { TextButton(onClick = { viewModel.deletePin(pin.id); showDeleteDialog = false; onBack() }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") } }
+        )
+    }
+
+    if (showBoardsDialog && pin != null) {
+        AlertDialog(
+            onDismissRequest = { showBoardsDialog = false }, title = { Text("Guardar en tablero") },
+            text = {
+                if (uiState.userBoards.isEmpty()) { Text("No tienes tableros. Crea uno en Explorar.") }
+                else {
+                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                        items(uiState.userBoards) { board ->
+                            ListItem(
+                                headlineContent = { Text(board.name, fontWeight = FontWeight.Bold) },
+                                modifier = Modifier.clickable {
+                                    viewModel.savePinToBoard(board.id, pin.id)
+                                    showBoardsDialog = false
+                                    Toast.makeText(context, "Guardado", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                            HorizontalDivider()
+                        }
+                    }
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
-            }
+            confirmButton = { TextButton(onClick = { showBoardsDialog = false }) { Text("Cerrar") } }
         )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.pinDetail?.title ?: "Detalle del Pin") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                    }
-                },
+                title = { Text("") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
                 actions = {
-                    val isOwner = uiState.currentUserId != null && uiState.pinDetail?.userId == uiState.currentUserId
-                    if (isOwner) {
-                        IconButton(onClick = { uiState.pinDetail?.let(onNavigateToEditPin) }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Editar")
-                        }
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Eliminar")
-                        }
+                    if (isOwner && pin != null) {
+                        IconButton(onClick = { onEditClick(pin.id) }) { Icon(Icons.Default.Edit, "Editar") }
+                        IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, "Eliminar", tint = MaterialTheme.colorScheme.error) }
                     }
                 }
             )
+        },
+        bottomBar = {
+            if (pin != null) {
+                Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(8.dp).navigationBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = uiState.newCommentText, onValueChange = { viewModel.onCommentTextChanged(it) }, placeholder = { Text("Añadir un comentario...") },
+                            modifier = Modifier.weight(1f), shape = CircleShape, colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.Transparent, focusedBorderColor = Color.Transparent, unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        )
+                        IconButton(onClick = { viewModel.addComment(pin.id) }, enabled = uiState.newCommentText.isNotBlank()) { Icon(Icons.AutoMirrored.Filled.Send, "Enviar", tint = MaterialTheme.colorScheme.primary) }
+                    }
+                }
+            }
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            when {
-                uiState.isLoadingDetail -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        if (uiState.isLoadingDetail) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        } else if (pin != null) {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), contentPadding = PaddingValues(bottom = 80.dp)) {
+                item {
+                    Box {
+                        AsyncImage(model = pin.imageUrl, contentDescription = pin.title, modifier = Modifier.fillMaxWidth().height(450.dp).clip(RoundedCornerShape(16.dp)), contentScale = ContentScale.Crop)
+                        Button(onClick = { showBoardsDialog = true }, modifier = Modifier.align(Alignment.TopEnd).padding(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("Guardar", color = Color.White, fontWeight = FontWeight.Bold) }
+                        FloatingActionButton(onClick = { viewModel.toggleLike(pin.id) }, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp), shape = CircleShape, containerColor = MaterialTheme.colorScheme.surface) {
+                            Icon(imageVector = if (pin.isLikedByMe) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder, contentDescription = "Like", tint = if (pin.isLikedByMe) Color.Red else MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { onUserClick(pin.userId) }.padding(vertical = 8.dp)) {
+                        val displayName = pin.userFullName.ifBlank { pin.username }
+                        AsyncImage(model = pin.userAvatarUrl ?: "https://ui-avatars.com/api/?name=${displayName.replace(" ", "+")}", contentDescription = "Avatar", modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.LightGray), contentScale = ContentScale.Crop)
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(displayName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            Text("@${pin.username}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text(pin.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    if (!pin.description.isNullOrBlank()) { Spacer(Modifier.height(8.dp)); Text(pin.description, style = MaterialTheme.typography.bodyLarge) }
+                    Spacer(Modifier.height(24.dp))
+                    Row(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        StatItem("Likes", pin.likesCount); StatItem("Comentarios", uiState.comments.size); StatItem("Guardados", pin.savesCount)
+                    }
+                    Spacer(Modifier.height(24.dp))
+                    Text("Comentarios", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
                 }
-                uiState.error != null && uiState.pinDetail == null -> {
-                    Text(
-                        text = uiState.error ?: "",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.align(Alignment.Center).padding(16.dp)
-                    )
-                }
-                uiState.pinDetail != null -> {
-                    PinDetailContent(
-                        pin = uiState.pinDetail!!,
-                        onLikeClick = { viewModel.toggleLike(pinId) },
-                        modifier = Modifier.fillMaxSize()
-                    )
+                if (uiState.comments.isEmpty()) {
+                    item { Text("Sé el primero en comentar.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp)) }
+                } else {
+                    items(uiState.comments) { comment ->
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                            val commentName = comment.userFullName?.ifBlank { comment.userUsername } ?: comment.userUsername
+                            AsyncImage(model = comment.userAvatarUrl ?: "https://ui-avatars.com/api/?name=${commentName.replace(" ", "+")}", contentDescription = null, modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.LightGray), contentScale = ContentScale.Crop)
+                            Spacer(Modifier.width(12.dp))
+                            Column { Text(commentName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium); Text(comment.text, style = MaterialTheme.typography.bodyMedium) }
+                        }
+                    }
                 }
             }
         }
@@ -108,138 +156,6 @@ fun PinDetailScreen(
 }
 
 @Composable
-private fun PinDetailContent(
-    pin: Pin,
-    onLikeClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-    ) {
-        Box {
-            AsyncImage(
-                model = pin.imageUrl,
-                contentDescription = pin.title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(350.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-                contentScale = ContentScale.Crop
-            )
-            
-            // Botón de Like flotante en el detalle
-            FilledTonalIconButton(
-                onClick = onLikeClick,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                shape = CircleShape,
-                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-                )
-            ) {
-                Icon(
-                    imageVector = if (pin.isLikedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Like",
-                    tint = if (pin.isLikedByMe) Color.Red else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(
-                model = pin.userAvatarUrl,
-                contentDescription = "Avatar de ${pin.userFullName}",
-                modifier = Modifier.size(40.dp).clip(CircleShape)
-            )
-            Spacer(Modifier.width(8.dp))
-            Column {
-                Text(pin.userFullName, fontWeight = FontWeight.SemiBold)
-                Text("@${pin.username}", style = MaterialTheme.typography.bodySmall)
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Text(pin.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-
-        if (!pin.description.isNullOrBlank()) {
-            Spacer(Modifier.height(8.dp))
-            Text(pin.description, style = MaterialTheme.typography.bodyMedium)
-        }
-
-        Spacer(Modifier.height(16.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(16.dp))
-
-        DetailRow("Categoría", pin.category)
-        DetailRow("Temporada", pin.season)
-        DetailRow("Rango de precio", pin.priceRange)
-        if (!pin.whereToBuy.isNullOrBlank()) DetailRow("Dónde comprar", pin.whereToBuy)
-        if (!pin.purchaseLink.isNullOrBlank()) DetailRow("Link de compra", pin.purchaseLink)
-
-        if (pin.styles.isNotEmpty()) TagSection("Estilos", pin.styles)
-        if (pin.occasions.isNotEmpty()) TagSection("Ocasiones", pin.occasions)
-        if (pin.brands.isNotEmpty()) TagSection("Marcas", pin.brands)
-        if (pin.colors.isNotEmpty()) TagSection("Colores", pin.colors)
-        if (pin.tags.isNotEmpty()) TagSection("Tags", pin.tags)
-
-        Spacer(Modifier.height(16.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            StatItem("Likes", pin.likesCount, pin.isLikedByMe)
-            StatItem("Guardados", pin.savesCount, pin.isSavedByMe)
-            StatItem("Comentarios", pin.commentsCount, false)
-            StatItem("Vistas", pin.viewsCount, false)
-        }
-    }
-}
-
-@Composable
-private fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value)
-    }
-}
-
-@Composable
-private fun TagSection(title: String, tags: List<String>) {
-    Spacer(Modifier.height(12.dp))
-    Text(title, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Spacer(Modifier.height(4.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        tags.forEach { tag ->
-            SuggestionChip(
-                onClick = {},
-                label = { Text(tag, style = MaterialTheme.typography.labelSmall) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun StatItem(label: String, count: Int, isActive: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            count.toString(), 
-            fontWeight = FontWeight.Bold, 
-            style = MaterialTheme.typography.titleMedium,
-            color = if (isActive && label == "Likes") Color.Red else MaterialTheme.colorScheme.onSurface
-        )
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+private fun StatItem(label: String, count: Int) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(count.toString(), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge); Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 }
