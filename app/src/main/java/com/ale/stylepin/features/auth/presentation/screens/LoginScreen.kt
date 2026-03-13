@@ -2,6 +2,7 @@ package com.ale.stylepin.features.auth.presentation.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
@@ -9,9 +10,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ale.stylepin.features.auth.presentation.components.StylePinPasswordField
 import com.ale.stylepin.features.auth.presentation.components.StylePinTextField
@@ -24,6 +27,7 @@ fun LoginScreen(
     onNavigateToRegister: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -71,6 +75,24 @@ fun LoginScreen(
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
             } else {
                 Text("Entrar", fontSize = 16.sp)
+            }
+        }
+
+        if (viewModel.canUseBiometrics()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            IconButton(
+                onClick = {
+                    val activity = context as? FragmentActivity
+                    activity?.let { viewModel.loginWithBiometrics(it) }
+                },
+                modifier = Modifier.size(64.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Fingerprint,
+                    contentDescription = "Login con huella",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(48.dp)
+                )
             }
         }
 

@@ -1,12 +1,6 @@
 package com.ale.stylepin.features.boards.data.datasources.remote.mapper
 
-import com.ale.stylepin.features.boards.data.datasources.remote.model.AddCollaboratorRequest
-import com.ale.stylepin.features.boards.data.datasources.remote.model.AddPinToBoardRequest
-import com.ale.stylepin.features.boards.data.datasources.remote.model.BoardCollaboratorResponse
-import com.ale.stylepin.features.boards.data.datasources.remote.model.BoardDto
-import com.ale.stylepin.features.boards.data.datasources.remote.model.BoardPinResponse
-import com.ale.stylepin.features.boards.data.datasources.remote.model.CreateBoardRequest
-import com.ale.stylepin.features.boards.data.datasources.remote.model.UpdateBoardRequest
+import com.ale.stylepin.features.boards.data.datasources.remote.model.*
 import com.ale.stylepin.features.boards.domain.entities.Board
 import com.ale.stylepin.features.boards.domain.entities.BoardCollaborator
 import com.ale.stylepin.features.boards.domain.entities.BoardPin
@@ -91,6 +85,16 @@ fun toAddCollaboratorRequest(
     canRemovePins: Boolean
 ): AddCollaboratorRequest = AddCollaboratorRequest(
     user_id = userId,
+    can_edit = canEdit,
+    can_add_pins = canAddPins,
+    can_remove_pins = canRemovePins
+)
+
+fun toUpdateCollaboratorRequest(
+    canEdit: Boolean,
+    canAddPins: Boolean,
+    canRemovePins: Boolean
+): UpdateCollaboratorRequest = UpdateCollaboratorRequest(
     can_edit = canEdit,
     can_add_pins = canAddPins,
     can_remove_pins = canRemovePins

@@ -8,4 +8,8 @@ class LoginUseCase @Inject constructor(private val repository: AuthRepository) {
     suspend fun execute(identity: String, pass: String): UserToken {
         return repository.login(identity, pass)
     }
+
+    fun hasStoredSession(): Boolean {
+        return repository.hasStoredToken()
+    }
 }

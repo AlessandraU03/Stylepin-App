@@ -102,3 +102,10 @@ data class AddCollaboratorRequest(
     val can_add_pins: Boolean = true,
     val can_remove_pins: Boolean = false
 )
+
+@Serializable
+data class UpdateCollaboratorRequest(
+    val can_edit: Boolean = false,
+    val can_add_pins: Boolean = true,
+    val can_remove_pins: Boolean = false
+)

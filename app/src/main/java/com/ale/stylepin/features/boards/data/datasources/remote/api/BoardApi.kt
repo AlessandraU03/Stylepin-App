@@ -76,4 +76,11 @@ interface BoardApi {
         @Path("board_id") boardId: String,
         @Path("collaborator_user_id") collaboratorUserId: String
     ): Response<Unit>
+
+    @PUT("api/v1/boards/{board_id}/collaborators/{collaborator_user_id}")
+    suspend fun updateCollaboratorPermissions(
+        @Path("board_id") boardId: String,
+        @Path("collaborator_user_id") collaboratorUserId: String,
+        @Body request: UpdateCollaboratorRequest
+    ): Response<BoardCollaboratorResponse>
 }

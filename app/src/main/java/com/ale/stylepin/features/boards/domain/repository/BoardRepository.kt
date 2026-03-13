@@ -47,4 +47,12 @@ interface BoardsRepository {
     ): BoardCollaborator
 
     suspend fun removeCollaborator(boardId: String, collaboratorUserId: String): Boolean
+
+    suspend fun updateCollaboratorPermissions(
+        boardId: String,
+        collaboratorUserId: String,
+        canEdit: Boolean,
+        canAddPins: Boolean,
+        canRemovePins: Boolean
+    ): BoardCollaborator
 }
