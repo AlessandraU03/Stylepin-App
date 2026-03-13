@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Environment
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
@@ -43,6 +44,17 @@ fun AddPinScreen(viewModel: PinsViewModel, onBack: () -> Unit) {
     val context = LocalContext.current
     var tempImageUri by remember { mutableStateOf<Uri?>(null) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
+
+    // Escuchar notificaciones del WebSocket en tiempo real
+    LaunchedEffect(Unit) {
+        viewModel.webSocketManager.notifications.collect { notification ->
+            Toast.makeText(
+                context,
+                "Notificación: ${notification.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
 
     fun createImageUri(): Uri {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
