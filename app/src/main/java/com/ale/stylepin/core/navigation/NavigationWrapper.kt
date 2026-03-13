@@ -12,12 +12,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle // <-- IMPORT IMPORTANTE
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+
+// Imports de tus pantallas y componentes
 import com.ale.stylepin.core.presentation.components.StylePinBottomBar
 import com.ale.stylepin.features.auth.presentation.screens.LoginScreen
 import com.ale.stylepin.features.auth.presentation.screens.RegisterScreen
@@ -28,8 +31,19 @@ import com.ale.stylepin.features.pins.presentation.screens.EditPinScreen
 import com.ale.stylepin.features.pins.presentation.screens.PinDetailScreen
 import com.ale.stylepin.features.pins.presentation.screens.PinsScreen
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
+
+// Imports de Profile y Settings
 import com.ale.stylepin.features.profile.presentation.screens.ProfileScreen
+import com.ale.stylepin.features.profile.presentation.screens.SettingsScreen
 import com.ale.stylepin.features.profile.presentation.viewmodels.ProfileViewModel
+import com.ale.stylepin.features.profile.presentation.viewmodels.SettingsViewModel
+
+// Imports de Community
+import com.ale.stylepin.features.community.presentation.screens.CommunityScreen
+import com.ale.stylepin.features.community.presentation.viewmodels.CommunityViewModel
+
+import com.ale.stylepin.features.profile.presentation.viewmodels.EditProfileViewModel
+import com.ale.stylepin.features.profile.presentation.screens.EditProfileScreen
 
 @Composable
 fun NavigationWrapper() {
@@ -75,10 +89,11 @@ fun NavigationWrapper() {
 
         NavHost(
             navController = navController,
-            startDestination = LoginRoute,
+            startDestination = LoginRoute, // o tu ruta inicial por defecto
             modifier = Modifier.padding(innerPadding)
         ) {
 
+            // --- AUTH ---
             composable<LoginRoute> {
                 val viewModel: LoginViewModel = hiltViewModel()
                 LoginScreen(
@@ -105,6 +120,7 @@ fun NavigationWrapper() {
                 )
             }
 
+            // --- PINS ---
             composable<PinsRoute> {
                 val viewModel: PinsViewModel = hiltViewModel()
                 PinsScreen(
@@ -116,27 +132,6 @@ fun NavigationWrapper() {
                     onNavigateToEditPin = { pin ->
                         navController.navigate(EditPinRoute(id = pin.id))
                     }
-                )
-            }
-
-            composable<SearchRoute> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Pantalla de Explorar")
-                }
-            }
-
-            composable<AlertsRoute> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Pantalla de Alertas")
-                }
-            }
-
-            composable<ProfileRoute> {
-                val viewModel: ProfileViewModel = hiltViewModel()
-                ProfileScreen(
-                    viewModel = viewModel,
-                    onBack = { navController.popBackStack() },
-                    onEditProfileClick = { navController.navigate(EditProfileRoute) }
                 )
             }
 
@@ -168,10 +163,74 @@ fun NavigationWrapper() {
                 )
             }
 
-            composable<EditProfileRoute> {
+            // --- PLACEHOLDERS ---
+            composable<SearchRoute> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Pantalla para Editar Perfil (Próximamente)")
+                    Text("Pantalla de Explorar")
                 }
+            }
+
+            composable<AlertsRoute> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Pantalla de Alertas")
+                }
+            }
+
+            // --- PROFILE Y COMMUNITY ---
+            composable<ProfileRoute> {
+                val viewModel: ProfileViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+                ProfileScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onEditProfileClick = { navController.navigate(EditProfileRoute) },
+                    onSettingsClick = { navController.navigate(SettingsRoute) },
+                    onCommunityClick = { tabIndex ->
+                        uiState.profile?.id?.let { userId ->
+                            navController.navigate(CommunityRoute(initialTab = tabIndex, userId = userId))
+                        }
+                    }
+                )
+            }
+
+            composable<EditProfileRoute> {
+                val viewModel: EditProfileViewModel = hiltViewModel()
+                EditProfileScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // PANTALLA DE CONFIGURACIÓN (Cerrar sesión)
+            composable<SettingsRoute> {
+                val viewModel: SettingsViewModel = hiltViewModel()
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onLogout = {
+                        viewModel.logout()
+                        // Limpia el historial y nos lleva al Login
+                        navController.navigate(LoginRoute) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            // PANTALLA DE COMUNIDAD (Seguidores / Seguidos)
+            composable<CommunityRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<CommunityRoute>()
+                val viewModel: CommunityViewModel = hiltViewModel()
+
+                LaunchedEffect(route.userId) {
+                    viewModel.loadData(route.userId)
+                }
+
+                CommunityScreen(
+                    initialTab = route.initialTab,
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

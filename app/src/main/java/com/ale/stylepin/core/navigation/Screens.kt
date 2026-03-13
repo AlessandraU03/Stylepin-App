@@ -22,3 +22,11 @@ data class PinDetailRoute(
 data class EditPinRoute(
     val id: String
 )
+
+@Serializable object SettingsRoute
+
+@Serializable
+data class CommunityRoute(
+    val initialTab: Int = 0,
+    val userId: String
+)

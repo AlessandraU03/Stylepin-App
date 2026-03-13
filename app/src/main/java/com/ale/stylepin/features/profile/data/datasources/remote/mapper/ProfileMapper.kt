@@ -8,9 +8,11 @@ fun mapToDomain(user: UserMeDto, stats: UserStatsDto): Profile {
     return Profile(
         id = user.id,
         username = user.username,
+        email = user.email,
         fullName = user.fullName,
-        bio = user.bio ?: "Sin biografía", // Valor seguro si el backend devuelve null
-        avatarUrl = user.avatarUrl ?: "", // Valor seguro
+        bio = user.bio ?: "",
+        avatarUrl = user.avatarUrl ?: "",
+        gender = user.gender ?: "other", // Valor por defecto seguro
         followersCount = stats.totalFollowers,
         followingCount = stats.totalFollowing,
         pinsCount = stats.totalPins
