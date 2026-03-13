@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.ale.stylepin.BuildConfig
 import com.ale.stylepin.core.network.AuthInterceptor
-import com.ale.stylepin.core.network.StylePinApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -49,11 +48,5 @@ object NetworkModule {
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-    }
-
-    @Provides
-    @Singleton
-    fun provideStylePinApi(@StylePinRetrofit retrofit: Retrofit): StylePinApi {
-        return retrofit.create(StylePinApi::class.java)
     }
 }

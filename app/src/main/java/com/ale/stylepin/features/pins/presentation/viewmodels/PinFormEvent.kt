@@ -1,14 +1,5 @@
 package com.ale.stylepin.features.pins.presentation.viewmodels
 
-/**
- * Eventos que la UI puede disparar al ViewModel para modificar
- * el estado del formulario de creación/edición de un pin.
- *
- * Ventajas frente a 14 funciones onXxxChange separadas:
- *  - Un único punto de entrada para todos los cambios del formulario
- *  - Más fácil de testear (se pasa un evento, se verifica el estado)
- *  - Escala sin crecer la interfaz pública del ViewModel
- */
 sealed class PinFormEvent {
     data class TitleChanged(val value: String) : PinFormEvent()
     data class DescriptionChanged(val value: String) : PinFormEvent()

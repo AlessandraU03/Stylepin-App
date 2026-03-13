@@ -56,14 +56,7 @@ fun PinsScreen(
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("StylePin Seasons") }) },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToAddPin,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar Pin", tint = Color.White)
-            }
-        }
+
     ) { innerPadding ->
         Box(
             modifier = Modifier
