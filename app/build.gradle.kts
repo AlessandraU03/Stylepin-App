@@ -97,6 +97,14 @@ dependencies {
     implementation(libs.hilt.navigation.compose)                    // Integración con Jetpack Compose
     ksp(libs.hilt.compiler)
 
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    // Serialization
+    implementation(libs.kotlinx.serialization.json)
+
     // Biometric & Camera
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.camera.core)
