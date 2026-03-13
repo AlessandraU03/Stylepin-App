@@ -56,7 +56,11 @@ fun PinsScreen(
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("StylePin Seasons") }) },
-
+        floatingActionButton = {
+            FloatingActionButton(onClick = onNavigateToAddPin) {
+                Icon(Icons.Default.Add, contentDescription = "Agregar Pin")
+            }
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -72,12 +76,14 @@ fun PinsScreen(
                 items(uiState.filteredPins, key = { it.id }) { pin ->
                     PinCard(
                         pin = pin,
+                        currentUserId = uiState.currentUserId,
                         onPinClick = { onNavigateToPinDetail(it) },
                         onEditClick = {
                             viewModel.loadPinById(pin.id)
                             onNavigateToEditPin(pin)
                         },
-                        onDeleteClick = { pinIdToDelete = it }
+                        onDeleteClick = { pinIdToDelete = it },
+                        onLikeClick = { viewModel.toggleLike(it) }
                     )
                 }
             }

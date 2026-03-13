@@ -49,6 +49,7 @@ import com.ale.stylepin.features.profile.presentation.screens.EditProfileScreen
 import com.ale.stylepin.features.boards.presentation.screens.BoardsScreen
 import com.ale.stylepin.features.boards.presentation.screens.BoardDetailScreen
 import com.ale.stylepin.features.boards.presentation.screens.CreateBoardScreen
+import com.ale.stylepin.features.boards.presentation.screens.EditBoardScreen
 import com.ale.stylepin.features.boards.presentation.viewmodels.BoardsViewModel
 
 @Composable
@@ -156,7 +157,10 @@ fun NavigationWrapper() {
                 PinDetailScreen(
                     pinId = route.id,
                     viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onNavigateToEditPin = { pin ->
+                        navController.navigate(EditPinRoute(id = pin.id))
+                    }
                 )
             }
 
@@ -173,15 +177,17 @@ fun NavigationWrapper() {
             // --- BOARDS ---
             composable<BoardsRoute> {
                 val viewModel: BoardsViewModel = hiltViewModel()
-                // TODO: obtener el userId real del usuario autenticado
+                val pinsViewModel: PinsViewModel = hiltViewModel()
+                val pinsState by pinsViewModel.uiState.collectAsStateWithLifecycle()
+                
                 BoardsScreen(
-                    userId = "USER_ID",
+                    userId = pinsState.currentUserId ?: "",
                     viewModel = viewModel,
                     onNavigateToBoardDetail = { boardId ->
                         navController.navigate(BoardDetailRoute(id = boardId))
                     },
                     onNavigateToCreateBoard = {
-                        navController.navigate(CreateBoardRoute(userId = "USER_ID"))
+                        navController.navigate(CreateBoardRoute(userId = pinsState.currentUserId ?: ""))
                     },
                     onNavigateToEditBoard = { board ->
                         navController.navigate(EditBoardRoute(id = board.id))
@@ -195,7 +201,13 @@ fun NavigationWrapper() {
                 BoardDetailScreen(
                     boardId = route.id,
                     viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onPinClick = { pinId ->
+                        navController.navigate(PinDetailRoute(id = pinId))
+                    },
+                    onEditBoard = { boardId ->
+                        navController.navigate(EditBoardRoute(id = boardId))
+                    }
                 )
             }
 
@@ -204,6 +216,20 @@ fun NavigationWrapper() {
                 val viewModel: BoardsViewModel = hiltViewModel()
                 CreateBoardScreen(
                     userId = route.userId,
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<EditBoardRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<EditBoardRoute>()
+                val viewModel: BoardsViewModel = hiltViewModel()
+                val pinsViewModel: PinsViewModel = hiltViewModel()
+                val pinsState by pinsViewModel.uiState.collectAsStateWithLifecycle()
+                
+                EditBoardScreen(
+                    boardId = route.id,
+                    userId = pinsState.currentUserId ?: "",
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() }
                 )

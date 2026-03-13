@@ -7,11 +7,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,12 +30,34 @@ import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 fun PinDetailScreen(
     pinId: String,
     viewModel: PinsViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToEditPin: (Pin) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(pinId) {
         viewModel.loadPinById(pinId)
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("¿Eliminar Pin?") },
+            text = { Text("Esta acción eliminará el outfit permanentemente de tu cuenta.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deletePin(pinId)
+                    showDeleteDialog = false
+                    onBack()
+                }) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
+            }
+        )
     }
 
     Scaffold(
@@ -40,6 +67,17 @@ fun PinDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    val isOwner = uiState.currentUserId != null && uiState.pinDetail?.userId == uiState.currentUserId
+                    if (isOwner) {
+                        IconButton(onClick = { uiState.pinDetail?.let(onNavigateToEditPin) }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar")
+                        }
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar")
+                        }
                     }
                 }
             )
@@ -58,7 +96,11 @@ fun PinDetailScreen(
                     )
                 }
                 uiState.pinDetail != null -> {
-                    PinDetailContent(pin = uiState.pinDetail!!, modifier = Modifier.fillMaxSize())
+                    PinDetailContent(
+                        pin = uiState.pinDetail!!,
+                        onLikeClick = { viewModel.toggleLike(pinId) },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
@@ -66,21 +108,46 @@ fun PinDetailScreen(
 }
 
 @Composable
-private fun PinDetailContent(pin: Pin, modifier: Modifier = Modifier) {
+private fun PinDetailContent(
+    pin: Pin,
+    onLikeClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        AsyncImage(
-            model = pin.imageUrl,
-            contentDescription = pin.title,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
-                .clip(RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Crop
-        )
+        Box {
+            AsyncImage(
+                model = pin.imageUrl,
+                contentDescription = pin.title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(350.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop
+            )
+            
+            // Botón de Like flotante en el detalle
+            FilledTonalIconButton(
+                onClick = onLikeClick,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                shape = CircleShape,
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                )
+            ) {
+                Icon(
+                    imageVector = if (pin.isLikedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Like",
+                    tint = if (pin.isLikedByMe) Color.Red else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -130,10 +197,10 @@ private fun PinDetailContent(pin: Pin, modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatItem("Likes", pin.likesCount)
-            StatItem("Guardados", pin.savesCount)
-            StatItem("Comentarios", pin.commentsCount)
-            StatItem("Vistas", pin.viewsCount)
+            StatItem("Likes", pin.likesCount, pin.isLikedByMe)
+            StatItem("Guardados", pin.savesCount, pin.isSavedByMe)
+            StatItem("Comentarios", pin.commentsCount, false)
+            StatItem("Vistas", pin.viewsCount, false)
         }
     }
 }
@@ -165,9 +232,14 @@ private fun TagSection(title: String, tags: List<String>) {
 }
 
 @Composable
-private fun StatItem(label: String, count: Int) {
+private fun StatItem(label: String, count: Int, isActive: Boolean) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(count.toString(), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+        Text(
+            count.toString(), 
+            fontWeight = FontWeight.Bold, 
+            style = MaterialTheme.typography.titleMedium,
+            color = if (isActive && label == "Likes") Color.Red else MaterialTheme.colorScheme.onSurface
+        )
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

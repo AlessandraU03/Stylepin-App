@@ -1,8 +1,20 @@
 package com.ale.stylepin.features.pins.domain.repository
 
 import com.ale.stylepin.features.pins.domain.entities.Pin
+import kotlinx.coroutines.flow.Flow
 
 interface PinsRepository {
+    /**
+     * Fuente de verdad única (SSOT). Emite la lista de pines guardada localmente
+     * y se actualiza automáticamente cuando la base de datos cambia.
+     */
+    fun getPinsFlow(): Flow<List<Pin>>
+
+    /**
+     * Sincroniza los pines locales con el servidor.
+     */
+    suspend fun refreshPins(): Result<Unit>
+
     suspend fun getPins(): List<Pin>
     suspend fun getPinById(pinId: String): Pin
     suspend fun addPin(

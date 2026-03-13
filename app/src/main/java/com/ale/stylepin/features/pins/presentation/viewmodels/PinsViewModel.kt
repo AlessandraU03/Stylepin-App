@@ -3,6 +3,7 @@ package com.ale.stylepin.features.pins.presentation.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.core.network.StylePinWebSocketManager
+import com.ale.stylepin.features.likes.domain.usecases.ToggleLikeUseCase
 import com.ale.stylepin.features.pins.domain.entities.Pin
 import com.ale.stylepin.features.pins.domain.usecases.AddPinsUseCase
 import com.ale.stylepin.features.pins.domain.usecases.DeletePinsUseCase
@@ -10,10 +11,13 @@ import com.ale.stylepin.features.pins.domain.usecases.GetPinByIdUseCase
 import com.ale.stylepin.features.pins.domain.usecases.GetPinsUseCase
 import com.ale.stylepin.features.pins.domain.usecases.UpdatePinsUseCase
 import com.ale.stylepin.features.pins.presentation.screens.PinsUiState
+import com.ale.stylepin.features.profile.domain.usecases.GetMyProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,6 +29,8 @@ class PinsViewModel @Inject constructor(
     private val addPinUseCase: AddPinsUseCase,
     private val updatePinUseCase: UpdatePinsUseCase,
     private val deletePinUseCase: DeletePinsUseCase,
+    private val getMyProfileUseCase: GetMyProfileUseCase,
+    private val toggleLikeUseCase: ToggleLikeUseCase,
     val webSocketManager: StylePinWebSocketManager
 ) : ViewModel() {
 
@@ -32,37 +38,51 @@ class PinsViewModel @Inject constructor(
     val uiState: StateFlow<PinsUiState> = _uiState.asStateFlow()
 
     init {
-        loadPins()
+        // 1. Conectar WebSocket
         webSocketManager.connect()
-    }
 
-    override fun onCleared() {
-        super.onCleared()
-        // Opcional: Desconectar si solo quieres WS mientras ves Pins
-        // webSocketManager.disconnect()
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Lista
-    // ─────────────────────────────────────────────────────────
-
-    fun loadPins() {
+        // 2. Cargar perfil de usuario
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            getPinsUseCase().fold(
-                onSuccess = { pins ->
-                    _uiState.update { it.copy(isLoading = false, pins = pins, filteredPins = pins) }
-                },
-                onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message) }
-                }
-            )
+            loadCurrentUser()
+        }
+
+        // 3. Suscribirse al Flow de Room (Single Source of Truth)
+        // Esto hace que cualquier cambio en la DB se refleje instantáneamente en la UI
+        getPinsUseCase.executeFlow()
+            .onEach { pins ->
+                _uiState.update { it.copy(pins = pins, filteredPins = pins, isLoading = false) }
+            }
+            .launchIn(viewModelScope)
+
+        // 4. Sincronizar con la API en segundo plano
+        refreshPins()
+    }
+
+    private suspend fun loadCurrentUser() {
+        try {
+            val profile = getMyProfileUseCase.execute()
+            _uiState.update { it.copy(currentUserId = profile.id) }
+        } catch (e: Exception) {
+            // Error silencioso
         }
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Detalle — carga pin completo y rellena formulario de edición
-    // ─────────────────────────────────────────────────────────
+    /**
+     * Lanza la petición de red para actualizar Room.
+     * La UI se actualizará sola gracias al Flow observado en el init.
+     */
+    fun refreshPins() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = it.pins.isEmpty()) } // Solo muestra loading si no hay datos en cache
+            getPinsUseCase.refresh()
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    // Mantenemos loadPins por compatibilidad si se llama desde la UI, pero ahora redirige a refresh
+    fun loadPins() {
+        refreshPins()
+    }
 
     fun loadPinById(pinId: String) {
         viewModelScope.launch {
@@ -100,82 +120,34 @@ class PinsViewModel @Inject constructor(
         }
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Guardar (crear o actualizar)
-    // ─────────────────────────────────────────────────────────
-
-    fun savePin(pinId: String? = null, onSuccess: () -> Unit) {
+    fun toggleLike(pinId: String) {
         viewModelScope.launch {
-            val s = _uiState.value
-            _uiState.update { it.copy(isLoading = true, error = null) }
-
-            val result = if (pinId == null) {
-                addPinUseCase(
-                    title = s.title,
-                    imageUrl = s.imageUrl,
-                    category = s.selectedCategory,
-                    season = s.selectedSeason,
-                    description = s.description.takeIf { it.isNotBlank() },
-                    isPrivate = s.isPrivate,
-                    styles = s.styles,
-                    occasions = s.occasions,
-                    brands = s.brands,
-                    priceRange = s.priceRange,
-                    whereToBuy = s.whereToBuy.takeIf { it.isNotBlank() },
-                    purchaseLink = s.purchaseLink.takeIf { it.isNotBlank() },
-                    colors = s.colors,
-                    tags = s.tags
-                )
-            } else {
-                updatePinUseCase(
-                    pinId = pinId,
-                    title = s.title,
-                    imageUrl = s.imageUrl.takeIf { it.isNotBlank() },
-                    category = s.selectedCategory,
-                    season = s.selectedSeason,
-                    description = s.description.takeIf { it.isNotBlank() },
-                    isPrivate = s.isPrivate
-                )
-            }
-
-            result.fold(
-                onSuccess = { success ->
-                    if (success) {
-                        _uiState.value = PinsUiState()
-                        loadPins()
-                        onSuccess()
-                    } else {
-                        _uiState.update { it.copy(isLoading = false, error = "Error al guardar el pin") }
+            toggleLikeUseCase(pinId).onSuccess { status ->
+                // Nota: Aquí podrías actualizar Room directamente para una respuesta UI instantánea
+                // Pero por ahora actualizamos el estado local del detalle
+                _uiState.update { state ->
+                    val updatePin = { p: Pin ->
+                        if (p.id == pinId) p.copy(isLikedByMe = status.isLiked, likesCount = status.likesCount)
+                        else p
                     }
-                },
-                onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message) }
+                    state.copy(
+                        pinDetail = if (state.pinDetail?.id == pinId) updatePin(state.pinDetail) else state.pinDetail
+                    )
                 }
-            )
+                // Refrescamos para sincronizar Room
+                getPinsUseCase.refresh()
+            }
         }
     }
-
-    // ─────────────────────────────────────────────────────────
-    // Eliminar
-    // ─────────────────────────────────────────────────────────
-
+    
     fun deletePin(id: String) {
         viewModelScope.launch {
             deletePinUseCase(id).fold(
-                onSuccess = { success ->
-                    if (success) loadPins()
-                    else _uiState.update { it.copy(error = "No se pudo eliminar el pin") }
-                },
-                onFailure = { e ->
-                    _uiState.update { it.copy(error = e.message) }
-                }
+                onSuccess = { success -> if (success) refreshPins() },
+                onFailure = { }
             )
         }
     }
-
-    // ─────────────────────────────────────────────────────────
-    // Formulario
-    // ─────────────────────────────────────────────────────────
 
     fun onFormEvent(event: PinFormEvent) {
         _uiState.update { state ->
@@ -195,6 +167,18 @@ class PinsViewModel @Inject constructor(
                 is PinFormEvent.ColorsChanged        -> state.copy(colors = event.value)
                 is PinFormEvent.TagsChanged          -> state.copy(tags = event.value)
             }
+        }
+    }
+
+    fun savePin(pinId: String? = null, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            val s = _uiState.value
+            val result = if (pinId == null) {
+                addPinUseCase(s.title, s.imageUrl, s.selectedCategory, s.selectedSeason, s.description, s.isPrivate, s.styles, s.occasions, s.brands, s.priceRange, s.whereToBuy, s.purchaseLink, s.colors, s.tags)
+            } else {
+                updatePinUseCase(pinId, s.title, s.imageUrl, s.selectedCategory, s.selectedSeason, s.description, s.isPrivate)
+            }
+            result.onSuccess { refreshPins(); onSuccess() }
         }
     }
 }

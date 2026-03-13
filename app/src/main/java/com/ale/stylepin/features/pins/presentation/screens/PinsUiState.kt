@@ -3,6 +3,7 @@ package com.ale.stylepin.features.pins.presentation.screens
 import com.ale.stylepin.features.pins.domain.entities.Pin
 
 data class PinsUiState(
+    val currentUserId: String? = null,
     // ── Lista de pins ──────────────────────────────────────
     val isLoading: Boolean = false,
     val pins: List<Pin> = emptyList(),
