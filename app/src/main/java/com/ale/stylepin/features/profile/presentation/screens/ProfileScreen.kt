@@ -1,6 +1,8 @@
+// com/ale/stylepin/features/profile/presentation/screens/ProfileScreen.kt
 package com.ale.stylepin.features.profile.presentation.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -28,7 +30,9 @@ import com.ale.stylepin.features.profile.presentation.viewmodels.ProfileViewMode
 fun ProfileScreen(
     viewModel: ProfileViewModel,
     onBack: () -> Unit,
-    onEditProfileClick: () -> Unit
+    onEditProfileClick: () -> Unit,
+    onSettingsClick: () -> Unit, // NUEVO: Para los 3 puntitos
+    onCommunityClick: (Int) -> Unit // NUEVO: Para Seguidores/Siguiendo (0 o 1)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -43,7 +47,8 @@ fun ProfileScreen(
                 },
                 actions = {
                     IconButton(onClick = { /* Acción compartir */ }) { Icon(Icons.Outlined.Share, contentDescription = "Compartir") }
-                    IconButton(onClick = { /* Menú opciones */ }) { Icon(Icons.Outlined.MoreVert, contentDescription = "Más opciones") }
+                    // Funcionalidad de los 3 puntitos agregada
+                    IconButton(onClick = onSettingsClick) { Icon(Icons.Outlined.MoreVert, contentDescription = "Más opciones") }
                 }
             )
         }
@@ -86,37 +91,54 @@ fun ProfileScreen(
                         modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp)
                     )
 
-                    // Botones de acción
+                    // Botón de acción (Se quitó el de mensaje, ahora Editar Perfil toma todo el ancho)
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         Button(
                             onClick = onEditProfileClick,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large
                         ) {
                             Text("Editar Perfil")
-                        }
-                        OutlinedButton(
-                            onClick = { /* Mensaje o Configuración */ },
-                            modifier = Modifier.weight(1f),
-                            shape = MaterialTheme.shapes.large
-                        ) {
-                            Text("Mensaje")
                         }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Estadísticas (Pins, Seguidores, Siguiendo)
+                    // Estadísticas (Pins, Seguidores, Siguiendo) - ¡Ahora son clickeables!
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        ProfileStatItem(formatStatNumber(profile.pinsCount), "PINS")
-                        ProfileStatItem(formatStatNumber(profile.followersCount), "SEGUIDORES")
-                        ProfileStatItem(formatStatNumber(profile.followingCount), "SIGUIENDO")
+                        // PINS
+                        Box(modifier = Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
+                            ProfileStatItem(formatStatNumber(profile.pinsCount), "PINS")
+                        }
+
+                        // SEGUIDORES (Lleva a la Tab 0)
+                        Box(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable { onCommunityClick(0) }
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ProfileStatItem(formatStatNumber(profile.followersCount), "SEGUIDORES")
+                        }
+
+                        // SIGUIENDO (Lleva a la Tab 1)
+                        Box(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable { onCommunityClick(1) }
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ProfileStatItem(formatStatNumber(profile.followingCount), "SIGUIENDO")
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
