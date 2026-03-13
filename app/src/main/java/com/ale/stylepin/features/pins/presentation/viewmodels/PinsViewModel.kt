@@ -1,77 +1,199 @@
 package com.ale.stylepin.features.pins.presentation.viewmodels
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ale.stylepin.features.pins.domain.usecases.GetPinsUseCase
-import com.ale.stylepin.features.pins.domain.usecases.DeletePinsUseCase
+import com.ale.stylepin.core.network.StylePinWebSocketManager
 import com.ale.stylepin.features.pins.domain.entities.Pin
+import com.ale.stylepin.features.pins.domain.usecases.AddPinsUseCase
+import com.ale.stylepin.features.pins.domain.usecases.DeletePinsUseCase
+import com.ale.stylepin.features.pins.domain.usecases.GetPinByIdUseCase
+import com.ale.stylepin.features.pins.domain.usecases.GetPinsUseCase
+import com.ale.stylepin.features.pins.domain.usecases.UpdatePinsUseCase
+import com.ale.stylepin.features.pins.presentation.screens.PinsUiState
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-// Estado de la UI
-data class PinsUiState(
-    val pins: List<Pin> = emptyList(),          // Todos los pines de EC2
-    val filteredPins: List<Pin> = emptyList(),  // Los que realmente se ven
-    val selectedSeason: String = "All",         // Temporada activa
-    val isLoading: Boolean = false,
-    val error: String? = null
-)
-
-class PinsViewModel(
+@HiltViewModel
+class PinsViewModel @Inject constructor(
     private val getPinsUseCase: GetPinsUseCase,
-    private val deletePinUseCase: DeletePinsUseCase
+    private val getPinByIdUseCase: GetPinByIdUseCase,
+    private val addPinUseCase: AddPinsUseCase,
+    private val updatePinUseCase: UpdatePinsUseCase,
+    private val deletePinUseCase: DeletePinsUseCase,
+    val webSocketManager: StylePinWebSocketManager
 ) : ViewModel() {
 
-    var uiState by mutableStateOf(PinsUiState())
-        private set
+    private val _uiState = MutableStateFlow(PinsUiState())
+    val uiState: StateFlow<PinsUiState> = _uiState.asStateFlow()
 
     init {
-        fetchPins()
+        loadPins()
+        webSocketManager.connect()
     }
 
-    fun fetchPins() {
+    override fun onCleared() {
+        super.onCleared()
+        // Opcional: Desconectar si solo quieres WS mientras ves Pins
+        // webSocketManager.disconnect()
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Lista
+    // ─────────────────────────────────────────────────────────
+
+    fun loadPins() {
         viewModelScope.launch {
-            uiState = uiState.copy(isLoading = true)
-            try {
-                val result = getPinsUseCase.execute()
-                uiState = uiState.copy(
-                    pins = result,
-                    // Al cargar, aplicamos el filtro actual (por si estaba en 'Winter')
-                    filteredPins = applyFilter(result, uiState.selectedSeason),
-                    isLoading = false,
-                    error = null
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            getPinsUseCase().fold(
+                onSuccess = { pins ->
+                    _uiState.update { it.copy(isLoading = false, pins = pins, filteredPins = pins) }
+                },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message) }
+                }
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Detalle — carga pin completo y rellena formulario de edición
+    // ─────────────────────────────────────────────────────────
+
+    fun loadPinById(pinId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingDetail = true, error = null) }
+            getPinByIdUseCase(pinId).fold(
+                onSuccess = { pin ->
+                    _uiState.update { it.copy(isLoadingDetail = false, pinDetail = pin) }
+                    populateFormFromPin(pin)
+                },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoadingDetail = false, error = e.message) }
+                }
+            )
+        }
+    }
+
+    private fun populateFormFromPin(pin: Pin) {
+        _uiState.update {
+            it.copy(
+                title = pin.title,
+                description = pin.description ?: "",
+                imageUrl = pin.imageUrl,
+                selectedCategory = pin.category,
+                selectedSeason = pin.season,
+                isPrivate = pin.isPrivate,
+                styles = pin.styles,
+                occasions = pin.occasions,
+                brands = pin.brands,
+                priceRange = pin.priceRange,
+                whereToBuy = pin.whereToBuy ?: "",
+                purchaseLink = pin.purchaseLink ?: "",
+                colors = pin.colors,
+                tags = pin.tags
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Guardar (crear o actualizar)
+    // ─────────────────────────────────────────────────────────
+
+    fun savePin(pinId: String? = null, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            val s = _uiState.value
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
+            val result = if (pinId == null) {
+                addPinUseCase(
+                    title = s.title,
+                    imageUrl = s.imageUrl,
+                    category = s.selectedCategory,
+                    season = s.selectedSeason,
+                    description = s.description.takeIf { it.isNotBlank() },
+                    isPrivate = s.isPrivate,
+                    styles = s.styles,
+                    occasions = s.occasions,
+                    brands = s.brands,
+                    priceRange = s.priceRange,
+                    whereToBuy = s.whereToBuy.takeIf { it.isNotBlank() },
+                    purchaseLink = s.purchaseLink.takeIf { it.isNotBlank() },
+                    colors = s.colors,
+                    tags = s.tags
                 )
-            } catch (e: Exception) {
-                uiState = uiState.copy(isLoading = false, error = e.message)
+            } else {
+                updatePinUseCase(
+                    pinId = pinId,
+                    title = s.title,
+                    imageUrl = s.imageUrl.takeIf { it.isNotBlank() },
+                    category = s.selectedCategory,
+                    season = s.selectedSeason,
+                    description = s.description.takeIf { it.isNotBlank() },
+                    isPrivate = s.isPrivate
+                )
             }
+
+            result.fold(
+                onSuccess = { success ->
+                    if (success) {
+                        _uiState.value = PinsUiState()
+                        loadPins()
+                        onSuccess()
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, error = "Error al guardar el pin") }
+                    }
+                },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message) }
+                }
+            )
         }
     }
 
-    // --- ESTA ES LA FUNCIÓN QUE LLAMAN LOS BOTONES ---
-    fun filterBySeason(season: String) {
-        uiState = uiState.copy(
-            selectedSeason = season,
-            filteredPins = applyFilter(uiState.pins, season)
-        )
-    }
+    // ─────────────────────────────────────────────────────────
+    // Eliminar
+    // ─────────────────────────────────────────────────────────
 
-    // Lógica interna de filtrado
-    private fun applyFilter(list: List<Pin>, season: String): List<Pin> {
-        return if (season == "All") {
-            list
-        } else {
-            // Comparamos el campo 'season' del Pin con el botón presionado
-            list.filter { it.season.equals(season, ignoreCase = true) }
-        }
-    }
-
-    fun deletePin(pinId: String) {
+    fun deletePin(id: String) {
         viewModelScope.launch {
-            val success = deletePinUseCase.execute(pinId)
-            if (success) {
-                fetchPins() // Recargamos de EC2 tras borrar
+            deletePinUseCase(id).fold(
+                onSuccess = { success ->
+                    if (success) loadPins()
+                    else _uiState.update { it.copy(error = "No se pudo eliminar el pin") }
+                },
+                onFailure = { e ->
+                    _uiState.update { it.copy(error = e.message) }
+                }
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Formulario
+    // ─────────────────────────────────────────────────────────
+
+    fun onFormEvent(event: PinFormEvent) {
+        _uiState.update { state ->
+            when (event) {
+                is PinFormEvent.TitleChanged         -> state.copy(title = event.value)
+                is PinFormEvent.DescriptionChanged   -> state.copy(description = event.value)
+                is PinFormEvent.ImageUrlChanged      -> state.copy(imageUrl = event.value)
+                is PinFormEvent.CategoryChanged      -> state.copy(selectedCategory = event.value)
+                is PinFormEvent.SeasonChanged        -> state.copy(selectedSeason = event.value)
+                is PinFormEvent.PriceRangeChanged    -> state.copy(priceRange = event.value)
+                is PinFormEvent.WhereToBuyChanged    -> state.copy(whereToBuy = event.value)
+                is PinFormEvent.PurchaseLinkChanged  -> state.copy(purchaseLink = event.value)
+                is PinFormEvent.IsPrivateChanged     -> state.copy(isPrivate = event.value)
+                is PinFormEvent.StylesChanged        -> state.copy(styles = event.value)
+                is PinFormEvent.OccasionsChanged     -> state.copy(occasions = event.value)
+                is PinFormEvent.BrandsChanged        -> state.copy(brands = event.value)
+                is PinFormEvent.ColorsChanged        -> state.copy(colors = event.value)
+                is PinFormEvent.TagsChanged          -> state.copy(tags = event.value)
             }
         }
     }

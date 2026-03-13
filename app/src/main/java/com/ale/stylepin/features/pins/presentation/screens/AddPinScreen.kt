@@ -1,52 +1,270 @@
 package com.ale.stylepin.features.pins.presentation.screens
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Environment
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.ale.stylepin.features.pins.presentation.viewmodels.AddPinViewModel
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.ale.stylepin.features.pins.presentation.viewmodels.PinFormEvent
+import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddPinScreen(viewModel: AddPinViewModel, onBack: () -> Unit) {
+fun AddPinScreen(viewModel: PinsViewModel, onBack: () -> Unit) {
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var tempImageUri by remember { mutableStateOf<Uri?>(null) }
+    var showImageSourceDialog by remember { mutableStateOf(false) }
+
+    // Escuchar notificaciones del WebSocket en tiempo real
+    LaunchedEffect(Unit) {
+        viewModel.webSocketManager.notifications.collect { notification ->
+            Toast.makeText(
+                context,
+                "Notificación: ${notification.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    fun createImageUri(): Uri {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onFormEvent(PinFormEvent.ImageUrlChanged(it.toString())) }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempImageUri?.let { viewModel.onFormEvent(PinFormEvent.ImageUrlChanged(it.toString())) }
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val uri = createImageUri()
+            tempImageUri = uri
+            cameraLauncher.launch(uri)
+        }
+    }
+
+    if (showImageSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showImageSourceDialog = false },
+            title = { Text("Seleccionar imagen") },
+            text = { Text("¿Desde dónde quieres añadir la foto?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val permissionCheckResult = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                    if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
+                        val uri = createImageUri()
+                        tempImageUri = uri
+                        cameraLauncher.launch(uri)
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                    showImageSourceDialog = false
+                }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Cámara")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    galleryLauncher.launch("image/*")
+                    showImageSourceDialog = false
+                }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Galería")
+                    }
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = { TopAppBar(title = { Text("Nuevo Pin") }) }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Selector de imagen
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, Color.Gray, RoundedCornerShape(12.dp))
+                    .clickable { showImageSourceDialog = true },
+                contentAlignment = Alignment.Center
+            ) {
+                if (uiState.imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = uiState.imageUrl,
+                        contentDescription = "Imagen seleccionada",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text("Toca para seleccionar imagen")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
             OutlinedTextField(
-                value = viewModel.title,
-                onValueChange = { viewModel.title = it },
-                label = { Text("Título del Outfit") },
+                value = uiState.title,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.TitleChanged(it)) },
+                label = { Text("Título *") },
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(Modifier.height(8.dp))
+
             OutlinedTextField(
-                value = viewModel.imageUrl,
-                onValueChange = { viewModel.imageUrl = it },
-                label = { Text("URL de la Imagen") },
+                value = uiState.description,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.DescriptionChanged(it)) },
+                label = { Text("Descripción") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.selectedCategory,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.CategoryChanged(it)) },
+                label = { Text("Categoría (outfit_completo, calzado, etc.) *") },
                 modifier = Modifier.fillMaxWidth()
             )
-            // Aquí podrías agregar Dropdowns para Temporada y Categoría basados en tu API
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.selectedSeason,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.SeasonChanged(it)) },
+                label = { Text("Temporada (todo_el_ano, verano, etc.)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.priceRange,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.PriceRangeChanged(it)) },
+                label = { Text("Rango de precio (bajo_500, etc.)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.whereToBuy,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.WhereToBuyChanged(it)) },
+                label = { Text("Dónde comprar") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.purchaseLink,
+                onValueChange = { viewModel.onFormEvent(PinFormEvent.PurchaseLinkChanged(it)) },
+                label = { Text("Link de compra") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = uiState.isPrivate,
+                    onCheckedChange = { viewModel.onFormEvent(PinFormEvent.IsPrivateChanged(it)) }
+                )
+                Text("¿Hacer este pin privado?")
+            }
+
+            Spacer(Modifier.height(24.dp))
 
             Button(
                 onClick = { viewModel.savePin { onBack() } },
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                enabled = !viewModel.isSaving && viewModel.title.isNotBlank()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading && uiState.title.isNotBlank() && uiState.imageUrl.isNotEmpty()
             ) {
-                if (viewModel.isSaving) CircularProgressIndicator(color = Color.White)
-                else Text("Publicar Pin")
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                } else {
+                    Text("Publicar Outfit")
+                }
+            }
+
+            uiState.error?.let { error ->
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     }

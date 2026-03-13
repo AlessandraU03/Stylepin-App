@@ -1,40 +1,41 @@
 package com.ale.stylepin
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.ale.stylepin.core.di.AppContainer
+import androidx.compose.runtime.LaunchedEffect
+import androidx.fragment.app.FragmentActivity
 import com.ale.stylepin.core.navigation.NavigationWrapper
-import com.ale.stylepin.features.auth.di.AuthModule
-import com.ale.stylepin.features.auth.navigation.AuthNavGraph
-import com.ale.stylepin.features.pins.di.PinModule
-import com.ale.stylepin.features.pins.navigation.PinsNavGraph
+import com.ale.stylepin.core.network.StylePinWebSocketManager
 import com.ale.stylepin.core.ui.theme.StylepinTheme
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
-class MainActivity : ComponentActivity() {
-    private lateinit var appContainer: AppContainer
+@AndroidEntryPoint
+class MainActivity : FragmentActivity() {
+
+    @Inject
+    lateinit var webSocketManager: StylePinWebSocketManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        appContainer = AppContainer(this)
-
-        // Inicializamos ambos módulos pasando el appContainer
-        val authModule = AuthModule(appContainer)
-        val pinsModule = PinModule(appContainer)
-
-        // Lista de grafos: Ahora incluimos PinsNavGraph
-        val navGraphs = listOf(
-            AuthNavGraph(authModule),
-            PinsNavGraph(pinsModule)
-        )
-
         enableEdgeToEdge()
         setContent {
             StylepinTheme {
-                // El NavigationWrapper se encarga de registrar todos los grafos de la lista
-                NavigationWrapper(navGraphs)
+                // Escucha global de notificaciones por WebSocket
+                LaunchedEffect(Unit) {
+                    webSocketManager.connect()
+                    webSocketManager.notifications.collect { notification ->
+                        Toast.makeText(
+                            applicationContext,
+                            "Notificación: ${notification.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+
+                NavigationWrapper()
             }
         }
     }
