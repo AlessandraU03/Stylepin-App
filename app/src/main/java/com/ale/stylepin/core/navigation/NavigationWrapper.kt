@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // <-- IMPORT IMPORTANTE
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -45,6 +45,12 @@ import com.ale.stylepin.features.community.presentation.viewmodels.CommunityView
 import com.ale.stylepin.features.profile.presentation.viewmodels.EditProfileViewModel
 import com.ale.stylepin.features.profile.presentation.screens.EditProfileScreen
 
+// Imports de Boards
+import com.ale.stylepin.features.boards.presentation.screens.BoardsScreen
+import com.ale.stylepin.features.boards.presentation.screens.BoardDetailScreen
+import com.ale.stylepin.features.boards.presentation.screens.CreateBoardScreen
+import com.ale.stylepin.features.boards.presentation.viewmodels.BoardsViewModel
+
 @Composable
 fun NavigationWrapper() {
     val navController = rememberNavController()
@@ -54,7 +60,8 @@ fun NavigationWrapper() {
     val showBottomBar = currentDestination?.hasRoute(PinsRoute::class) == true ||
             currentDestination?.hasRoute(SearchRoute::class) == true ||
             currentDestination?.hasRoute(AlertsRoute::class) == true ||
-            currentDestination?.hasRoute(ProfileRoute::class) == true
+            currentDestination?.hasRoute(ProfileRoute::class) == true ||
+            currentDestination?.hasRoute(BoardsRoute::class) == true
 
     Scaffold(
         bottomBar = {
@@ -64,7 +71,7 @@ fun NavigationWrapper() {
                     onNavigate = { title ->
                         when (title) {
                             "Inicio"   -> navController.navigate(PinsRoute) { popUpTo(PinsRoute) { inclusive = true } }
-                            "Explorar" -> navController.navigate(SearchRoute) { popUpTo(PinsRoute) }
+                            "Explorar" -> navController.navigate(BoardsRoute) { popUpTo(PinsRoute) }
                             "Alertas"  -> navController.navigate(AlertsRoute) { popUpTo(PinsRoute) }
                             "Perfil"   -> navController.navigate(ProfileRoute) { popUpTo(PinsRoute) }
                         }
@@ -73,7 +80,7 @@ fun NavigationWrapper() {
             }
         },
         floatingActionButton = {
-            if (showBottomBar) {
+            if (showBottomBar && currentDestination?.hasRoute(PinsRoute::class) == true) {
                 FloatingActionButton(
                     onClick = { navController.navigate(AddPinRoute) },
                     shape = CircleShape,
@@ -89,7 +96,7 @@ fun NavigationWrapper() {
 
         NavHost(
             navController = navController,
-            startDestination = LoginRoute, // o tu ruta inicial por defecto
+            startDestination = LoginRoute,
             modifier = Modifier.padding(innerPadding)
         ) {
 
@@ -163,7 +170,46 @@ fun NavigationWrapper() {
                 )
             }
 
-            // --- PLACEHOLDERS ---
+            // --- BOARDS ---
+            composable<BoardsRoute> {
+                val viewModel: BoardsViewModel = hiltViewModel()
+                // TODO: obtener el userId real del usuario autenticado
+                BoardsScreen(
+                    userId = "USER_ID",
+                    viewModel = viewModel,
+                    onNavigateToBoardDetail = { boardId ->
+                        navController.navigate(BoardDetailRoute(id = boardId))
+                    },
+                    onNavigateToCreateBoard = {
+                        navController.navigate(CreateBoardRoute(userId = "USER_ID"))
+                    },
+                    onNavigateToEditBoard = { board ->
+                        navController.navigate(EditBoardRoute(id = board.id))
+                    }
+                )
+            }
+
+            composable<BoardDetailRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<BoardDetailRoute>()
+                val viewModel: BoardsViewModel = hiltViewModel()
+                BoardDetailScreen(
+                    boardId = route.id,
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<CreateBoardRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<CreateBoardRoute>()
+                val viewModel: BoardsViewModel = hiltViewModel()
+                CreateBoardScreen(
+                    userId = route.userId,
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // --- PLACEHOLDERS / OTROS ---
             composable<SearchRoute> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Pantalla de Explorar")
@@ -202,14 +248,12 @@ fun NavigationWrapper() {
                 )
             }
 
-            // PANTALLA DE CONFIGURACIÓN (Cerrar sesión)
             composable<SettingsRoute> {
                 val viewModel: SettingsViewModel = hiltViewModel()
                 SettingsScreen(
                     onBack = { navController.popBackStack() },
                     onLogout = {
                         viewModel.logout()
-                        // Limpia el historial y nos lleva al Login
                         navController.navigate(LoginRoute) {
                             popUpTo(0) { inclusive = true }
                         }
@@ -217,7 +261,6 @@ fun NavigationWrapper() {
                 )
             }
 
-            // PANTALLA DE COMUNIDAD (Seguidores / Seguidos)
             composable<CommunityRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<CommunityRoute>()
                 val viewModel: CommunityViewModel = hiltViewModel()

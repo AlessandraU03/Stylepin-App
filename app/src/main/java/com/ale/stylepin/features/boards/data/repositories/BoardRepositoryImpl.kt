@@ -17,8 +17,12 @@ class BoardRepositoryImpl @Inject constructor(
     private val api: BoardApi
 ) : BoardsRepository {
 
+    override suspend fun getAllBoards(userId: String?): List<Board> {
+        return api.getAllBoards(userId).body()?.map { it.toDomain() } ?: emptyList()
+    }
+
     override suspend fun getUserBoards(userId: String): List<Board> {
-        return api.getUserBoards(userId).body()?.boards?.map { it.toDomain() } ?: emptyList()
+        return api.getUserBoards(userId).body()?.map { it.toDomain() } ?: emptyList()
     }
 
     override suspend fun getBoardById(boardId: String): Board {

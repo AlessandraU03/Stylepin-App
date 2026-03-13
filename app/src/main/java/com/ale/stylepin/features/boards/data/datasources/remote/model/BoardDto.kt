@@ -9,7 +9,7 @@ data class BoardDto(
     val id: String,
     val user_id: String,
     val user_username: String,
-    val user_full_name: String,
+    val user_full_name: String? = null,
     val user_avatar_url: String? = null,
     val name: String,
     val description: String? = null,
@@ -18,7 +18,7 @@ data class BoardDto(
     val is_collaborative: Boolean = false,
     val pins_count: Int = 0,
     val created_at: String,
-    val updated_at: String,
+    val updated_at: String? = null,
     val is_owner: Boolean = false,
     val is_collaborator: Boolean = false
 )

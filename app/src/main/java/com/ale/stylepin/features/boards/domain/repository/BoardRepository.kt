@@ -6,6 +6,8 @@ import com.ale.stylepin.features.boards.domain.entities.BoardPin
 
 interface BoardsRepository {
 
+    suspend fun getAllBoards(userId: String? = null): List<Board>
+
     suspend fun getUserBoards(userId: String): List<Board>
 
     suspend fun getBoardById(boardId: String): Board

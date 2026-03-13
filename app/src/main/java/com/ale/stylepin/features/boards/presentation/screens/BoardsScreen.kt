@@ -26,7 +26,10 @@ fun BoardsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var boardIdToDelete by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(userId) { viewModel.loadUserBoards(userId) }
+    // Al entrar a la pantalla, cargamos todos los tableros públicos
+    LaunchedEffect(Unit) { 
+        viewModel.loadAllBoards() 
+    }
 
     boardIdToDelete?.let { id ->
         AlertDialog(
@@ -34,7 +37,10 @@ fun BoardsScreen(
             title = { Text("¿Eliminar tablero?") },
             text = { Text("Esta acción eliminará el tablero y todo su contenido permanentemente.") },
             confirmButton = {
-                TextButton(onClick = { viewModel.deleteBoard(id, userId); boardIdToDelete = null }) {
+                TextButton(onClick = { 
+                    viewModel.deleteBoard(id, userId)
+                    boardIdToDelete = null 
+                }) {
                     Text("Eliminar", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -43,7 +49,7 @@ fun BoardsScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Mis Tableros") }) },
+        topBar = { TopAppBar(title = { Text("Explorar Tableros") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = onNavigateToCreateBoard) {
                 Icon(Icons.Default.Add, contentDescription = "Crear tablero")
@@ -54,10 +60,15 @@ fun BoardsScreen(
             when {
                 uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 uiState.boards.isEmpty() -> {
-                    Column(modifier = Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Aún no tienes tableros")
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("No se encontraron tableros públicos")
                         Spacer(Modifier.height(8.dp))
-                        Button(onClick = onNavigateToCreateBoard) { Text("Crear mi primer tablero") }
+                        Button(onClick = onNavigateToCreateBoard) { 
+                            Text("Crear mi propio tablero") 
+                        }
                     }
                 }
                 else -> {
@@ -80,7 +91,9 @@ fun BoardsScreen(
             uiState.error?.let { error ->
                 Snackbar(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                    action = { TextButton(onClick = { viewModel.clearError() }) { Text("OK") } }
+                    action = { 
+                        TextButton(onClick = { viewModel.clearError() }) { Text("OK") } 
+                    }
                 ) { Text(error) }
             }
         }

@@ -15,6 +15,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BoardsViewModel @Inject constructor(
+    private val getAllBoardsUseCase: GetAllBoardsUseCase,
     private val getUserBoardsUseCase: GetUserBoardsUseCase,
     private val getBoardByIdUseCase: GetBoardByIdUseCase,
     private val createBoardUseCase: CreateBoardUseCase,
@@ -32,6 +33,16 @@ class BoardsViewModel @Inject constructor(
     val uiState: StateFlow<BoardsUiState> = _uiState.asStateFlow()
 
     // ── Lista ─────────────────────────────────────────────────
+
+    fun loadAllBoards(userId: String? = null) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            getAllBoardsUseCase(userId).fold(
+                onSuccess = { boards -> _uiState.update { it.copy(isLoading = false, boards = boards) } },
+                onFailure = { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
+            )
+        }
+    }
 
     fun loadUserBoards(userId: String) {
         viewModelScope.launch {
@@ -89,7 +100,7 @@ class BoardsViewModel @Inject constructor(
                 isPrivate = s.isPrivate,
                 isCollaborative = s.isCollaborative
             ).fold(
-                onSuccess = { resetForm(); loadUserBoards(userId); onSuccess() },
+                onSuccess = { resetForm(); loadAllBoards(); onSuccess() },
                 onFailure = { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
             )
         }
@@ -106,7 +117,7 @@ class BoardsViewModel @Inject constructor(
                 isPrivate = s.isPrivate,
                 isCollaborative = s.isCollaborative
             ).fold(
-                onSuccess = { resetForm(); loadUserBoards(userId); onSuccess() },
+                onSuccess = { resetForm(); loadAllBoards(); onSuccess() },
                 onFailure = { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
             )
         }
@@ -115,7 +126,7 @@ class BoardsViewModel @Inject constructor(
     fun deleteBoard(boardId: String, userId: String) {
         viewModelScope.launch {
             deleteBoardUseCase(boardId).fold(
-                onSuccess = { loadUserBoards(userId) },
+                onSuccess = { loadAllBoards() },
                 onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
             )
         }

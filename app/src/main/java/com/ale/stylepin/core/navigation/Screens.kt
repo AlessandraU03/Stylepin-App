@@ -30,3 +30,8 @@ data class CommunityRoute(
     val initialTab: Int = 0,
     val userId: String
 )
+
+@Serializable object BoardsRoute
+@Serializable data class BoardDetailRoute(val id: String)
+@Serializable data class CreateBoardRoute(val userId: String)
+@Serializable data class EditBoardRoute(val id: String)
