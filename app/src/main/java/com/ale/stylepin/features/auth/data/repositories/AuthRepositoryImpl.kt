@@ -1,17 +1,19 @@
+// com/ale/stylepin/features/auth/data/repositories/AuthRepositoryImpl.kt
 package com.ale.stylepin.features.auth.data.repositories
 
 import android.content.SharedPreferences
-import com.ale.stylepin.core.network.StylePinApi
+import com.ale.stylepin.features.auth.data.datasources.remote.api.AuthApi
+import com.ale.stylepin.features.auth.data.datasources.remote.mapper.toDomain
 import com.ale.stylepin.features.auth.data.datasources.remote.model.LoginRequest
 import com.ale.stylepin.features.auth.data.datasources.remote.model.RegisterRequest
-import com.ale.stylepin.features.auth.domain.repositories.AuthRepository
 import com.ale.stylepin.features.auth.domain.entities.UserToken
+import com.ale.stylepin.features.auth.domain.repositories.AuthRepository
 import org.json.JSONObject
 import retrofit2.HttpException
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
-    private val api: StylePinApi,
+    private val api: AuthApi, // Usamos AuthApi, no la global
     private val prefs: SharedPreferences
 ) : AuthRepository {
 
@@ -19,7 +21,9 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             val response = api.login(LoginRequest(identity, pass))
             prefs.edit().putString("auth_token", response.token).apply()
-            return UserToken(token = response.token, username = response.user.username)
+
+            // Usamos tu mapper toDomain() en lugar de instanciarlo a mano
+            return response.toDomain()
         } catch (e: HttpException) {
             throw Exception(parseErrorMessage(e))
         }
@@ -35,7 +39,8 @@ class AuthRepositoryImpl @Inject constructor(
             )
             val response = api.register(request)
             prefs.edit().putString("auth_token", response.token).apply()
-            return UserToken(token = response.token, username = response.user.username)
+
+            return response.toDomain() // Usamos tu mapper
         } catch (e: HttpException) {
             throw Exception(parseErrorMessage(e))
         }
@@ -43,8 +48,6 @@ class AuthRepositoryImpl @Inject constructor(
 
     private fun parseErrorMessage(exception: HttpException): String {
         val code = exception.code()
-
-        // Mensajes amigables para errores comunes HTTP
         if (code == 401) return "Usuario o contraseña incorrectos."
         if (code == 409 || code == 422) return "Verifica tus datos. Es posible que el correo o usuario ya estén registrados."
 
