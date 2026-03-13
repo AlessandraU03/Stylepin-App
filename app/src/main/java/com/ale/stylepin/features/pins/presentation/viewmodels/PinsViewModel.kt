@@ -47,15 +47,17 @@ class PinsViewModel @Inject constructor(
         }
 
         // 3. Suscribirse al Flow de Room (Single Source of Truth)
-        // Esto hace que cualquier cambio en la DB se refleje instantáneamente en la UI
+        // Solo refrescamos desde la red si Room está TOTALMENTE vacío
         getPinsUseCase.executeFlow()
             .onEach { pins ->
                 _uiState.update { it.copy(pins = pins, filteredPins = pins, isLoading = false) }
+                
+                // Si la base de datos está vacía, forzamos la primera carga
+                if (pins.isEmpty()) {
+                    refreshPins()
+                }
             }
             .launchIn(viewModelScope)
-
-        // 4. Sincronizar con la API en segundo plano
-        refreshPins()
     }
 
     private suspend fun loadCurrentUser() {
@@ -68,18 +70,18 @@ class PinsViewModel @Inject constructor(
     }
 
     /**
-     * Lanza la petición de red para actualizar Room.
-     * La UI se actualizará sola gracias al Flow observado en el init.
+     * Sincronización manual o inicial. 
+     * Ya no se llama automáticamente cada vez que se abre la app si ya hay datos.
      */
     fun refreshPins() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = it.pins.isEmpty()) } // Solo muestra loading si no hay datos en cache
+            _uiState.update { it.copy(isLoading = true) }
             getPinsUseCase.refresh()
             _uiState.update { it.copy(isLoading = false) }
         }
     }
 
-    // Mantenemos loadPins por compatibilidad si se llama desde la UI, pero ahora redirige a refresh
+    // Mantenemos loadPins para el SwipeRefresh (acción manual del usuario)
     fun loadPins() {
         refreshPins()
     }
@@ -123,8 +125,6 @@ class PinsViewModel @Inject constructor(
     fun toggleLike(pinId: String) {
         viewModelScope.launch {
             toggleLikeUseCase(pinId).onSuccess { status ->
-                // Nota: Aquí podrías actualizar Room directamente para una respuesta UI instantánea
-                // Pero por ahora actualizamos el estado local del detalle
                 _uiState.update { state ->
                     val updatePin = { p: Pin ->
                         if (p.id == pinId) p.copy(isLikedByMe = status.isLiked, likesCount = status.likesCount)
@@ -134,8 +134,6 @@ class PinsViewModel @Inject constructor(
                         pinDetail = if (state.pinDetail?.id == pinId) updatePin(state.pinDetail) else state.pinDetail
                     )
                 }
-                // Refrescamos para sincronizar Room
-                getPinsUseCase.refresh()
             }
         }
     }
