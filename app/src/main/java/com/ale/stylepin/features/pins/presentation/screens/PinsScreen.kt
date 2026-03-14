@@ -22,7 +22,7 @@ import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 @Composable
 fun PinsScreen(
     viewModel: PinsViewModel,
-    onNavigateToAddPin: () -> Unit, // Lo mantenemos para que no rompa tu NavigationWrapper
+    onNavigateToAddPin: () -> Unit,
     onNavigateToPinDetail: (String) -> Unit,
     onNavigateToEditPin: (Pin) -> Unit
 ) {
@@ -36,7 +36,6 @@ fun PinsScreen(
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("StylePin") }) }
-        // ¡FloatingActionButton eliminado de aquí!
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -44,7 +43,6 @@ fun PinsScreen(
                 .fillMaxSize()
                 .pullRefresh(pullRefreshState)
         ) {
-            // GRID ESCALONADO A 2 COLUMNAS
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Fixed(2),
                 contentPadding = PaddingValues(8.dp),
@@ -60,12 +58,10 @@ fun PinsScreen(
                 }
             }
 
-            // Indicador de carga inicial
             if (uiState.isLoading && uiState.pins.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
 
-            // Indicador del Pull to Refresh
             PullRefreshIndicator(
                 refreshing = uiState.isLoading,
                 state = pullRefreshState,

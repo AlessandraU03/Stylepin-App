@@ -10,6 +10,8 @@ import com.ale.stylepin.features.pins.data.datasources.remote.api.PinApi
 import com.ale.stylepin.features.pins.data.datasources.remote.mapper.buildPartMap
 import com.ale.stylepin.features.pins.data.datasources.remote.mapper.toDomain
 import com.ale.stylepin.features.pins.data.datasources.remote.mapper.toUpdateRequest
+import com.ale.stylepin.features.pins.data.datasources.remote.model.CreateCommentRequest // <-- Agregado
+import com.ale.stylepin.features.pins.domain.entities.Comment // <-- Agregado
 import com.ale.stylepin.features.pins.domain.entities.Pin
 import com.ale.stylepin.features.pins.domain.repository.PinsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -159,8 +161,6 @@ class PinRepositoryImpl @Inject constructor(
     override suspend fun deletePin(pinId: String): Boolean {
         return try {
             val response = api.deletePin(pinId)
-            // Aquí deberías tener un delete en el DAO también si quieres borrarlo de cache
-            // pinDao.deleteById(pinId)
             response.isSuccessful
         } catch (e: Exception) {
             Log.e(TAG, "deletePin exception", e)
@@ -178,6 +178,27 @@ class PinRepositoryImpl @Inject constructor(
             Log.e(TAG, "buildImagePart error", e)
             null
         }
+    }
+
+    override suspend fun getPinComments(pinId: String): List<Comment> {
+        val response = api.getPinComments(pinId)
+        return response.body()?.comments?.map { dto ->
+            Comment(
+                id = dto.id, pinId = dto.pin_id, userId = dto.user_id,
+                username = dto.user_username, userFullName = dto.user_full_name,
+                userAvatarUrl = dto.user_avatar_url ?: "", text = dto.text, createdAt = dto.created_at
+            )
+        } ?: emptyList()
+    }
+
+    override suspend fun addComment(pinId: String, text: String): Comment {
+        val response = api.addComment(CreateCommentRequest(pinId, text))
+        val dto = response.body() ?: throw Exception("Error al comentar")
+        return Comment(
+            id = dto.id, pinId = dto.pin_id, userId = dto.user_id,
+            username = dto.user_username, userFullName = dto.user_full_name,
+            userAvatarUrl = dto.user_avatar_url ?: "", text = dto.text, createdAt = dto.created_at
+        )
     }
 
     companion object {

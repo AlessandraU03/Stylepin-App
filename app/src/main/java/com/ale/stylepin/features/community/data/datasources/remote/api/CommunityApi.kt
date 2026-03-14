@@ -3,6 +3,7 @@ package com.ale.stylepin.features.community.data.datasources.remote.api
 import com.ale.stylepin.features.community.data.datasources.remote.model.FollowUserRequest
 import com.ale.stylepin.features.community.data.datasources.remote.model.FollowersListResponse
 import com.ale.stylepin.features.community.data.datasources.remote.model.FollowingListResponse
+import com.ale.stylepin.features.community.data.datasources.remote.model.*
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -31,4 +32,7 @@ interface CommunityApi {
 
     @DELETE("api/v1/follows/{target_user_id}")
     suspend fun unfollowUser(@Path("target_user_id") targetUserId: String): Response<Unit>
+
+    @GET("api/v1/follows/status/{target_user_id}")
+    suspend fun getFollowStatus(@Path("target_user_id") targetUserId: String): Response<FollowStatusResponse>
 }

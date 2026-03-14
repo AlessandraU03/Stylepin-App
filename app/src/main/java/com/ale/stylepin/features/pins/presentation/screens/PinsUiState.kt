@@ -1,20 +1,28 @@
 package com.ale.stylepin.features.pins.presentation.screens
 
+import com.ale.stylepin.features.boards.domain.entities.Board
 import com.ale.stylepin.features.pins.domain.entities.Pin
+import com.ale.stylepin.features.pins.domain.entities.Comment
 
 data class PinsUiState(
     val currentUserId: String? = null,
-    // ── Lista de pins ──────────────────────────────────────
     val isLoading: Boolean = false,
     val pins: List<Pin> = emptyList(),
     val filteredPins: List<Pin> = emptyList(),
     val error: String? = null,
 
-    // ── Detalle de un pin individual ───────────────────────
+    // -- Detalle del Pin --
     val pinDetail: Pin? = null,
     val isLoadingDetail: Boolean = false,
+    val authorIsFollowed: Boolean = false,
+    val comments: List<Comment> = emptyList(),
+    val commentInput: String = "",
 
-    // ── Formulario de creación / edición ───────────────────
+    // -- Guardar en Tablero --
+    val myBoards: List<Board> = emptyList(),
+    val isSaveSheetVisible: Boolean = false,
+
+    // -- Formulario --
     val title: String = "",
     val description: String = "",
     val imageUrl: String = "",

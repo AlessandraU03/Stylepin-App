@@ -1,6 +1,7 @@
 package com.ale.stylepin.features.pins.domain.repository
 
 import com.ale.stylepin.features.pins.domain.entities.Pin
+import com.ale.stylepin.features.pins.domain.entities.Comment
 import kotlinx.coroutines.flow.Flow
 
 interface PinsRepository {
@@ -43,4 +44,7 @@ interface PinsRepository {
         isPrivate: Boolean
     ): Boolean
     suspend fun deletePin(pinId: String): Boolean
+
+    suspend fun getPinComments(pinId: String): List<Comment>
+    suspend fun addComment(pinId: String, text: String): Comment
 }
