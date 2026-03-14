@@ -5,20 +5,19 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface BoardApi {
-
     @GET("api/v1/boards")
     suspend fun getAllBoards(
         @Query("user_id") userId: String? = null,
         @Query("limit") limit: Int = 20,
         @Query("offset") offset: Int = 0
-    ): Response<List<BoardDto>>
+    ): Response<BoardListResponse> // CORREGIDO
 
     @GET("api/v1/boards/user/{user_id}")
     suspend fun getUserBoards(
         @Path("user_id") userId: String,
         @Query("limit") limit: Int = 20,
         @Query("offset") offset: Int = 0
-    ): Response<List<BoardDto>>
+    ): Response<BoardListResponse> // CORREGIDO
 
     @GET("api/v1/boards/{board_id}")
     suspend fun getBoardById(

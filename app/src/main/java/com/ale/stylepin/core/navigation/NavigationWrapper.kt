@@ -251,17 +251,23 @@ fun NavigationWrapper() {
             // --- PROFILE Y COMMUNITY ---
             composable<ProfileRoute> {
                 val viewModel: ProfileViewModel = hiltViewModel()
-                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
                 ProfileScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
                     onEditProfileClick = { navController.navigate(EditProfileRoute) },
                     onSettingsClick = { navController.navigate(SettingsRoute) },
                     onCommunityClick = { tabIndex ->
-                        uiState.profile?.id?.let { userId ->
+                        val userId = viewModel.uiState.value.profile?.id
+                        if(userId != null) {
                             navController.navigate(CommunityRoute(initialTab = tabIndex, userId = userId))
                         }
+                    },
+                    // Pasamos las lambdas de navegación hacia los Detalles de Pins y Tableros
+                    onNavigateToPinDetail = { pinId ->
+                        navController.navigate(PinDetailRoute(id = pinId))
+                    },
+                    onNavigateToBoardDetail = { boardId ->
+                        navController.navigate(BoardDetailRoute(id = boardId))
                     }
                 )
             }
@@ -277,6 +283,7 @@ fun NavigationWrapper() {
             composable<SettingsRoute> {
                 val viewModel: SettingsViewModel = hiltViewModel()
                 SettingsScreen(
+                    viewModel = viewModel,
                     onBack = { navController.popBackStack() },
                     onLogout = {
                         viewModel.logout()
