@@ -5,8 +5,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -24,9 +22,9 @@ import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 @Composable
 fun PinsScreen(
     viewModel: PinsViewModel,
-    onNavigateToAddPin: () -> Unit,
+    onNavigateToAddPin: () -> Unit, // Lo mantenemos para que no rompa tu NavigationWrapper
     onNavigateToPinDetail: (String) -> Unit,
-    onNavigateToEditPin: (Pin) -> Unit // Mantenemos el parámetro para no romper el NavigationWrapper
+    onNavigateToEditPin: (Pin) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -37,12 +35,8 @@ fun PinsScreen(
     )
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("StylePin") }) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onNavigateToAddPin) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar Pin")
-            }
-        }
+        topBar = { TopAppBar(title = { Text("StylePin") }) }
+        // ¡FloatingActionButton eliminado de aquí!
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -55,7 +49,7 @@ fun PinsScreen(
                 columns = StaggeredGridCells.Fixed(2),
                 contentPadding = PaddingValues(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalItemSpacing = 16.dp, // Espacio hacia abajo
+                verticalItemSpacing = 16.dp,
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(uiState.filteredPins, key = { it.id }) { pin ->
