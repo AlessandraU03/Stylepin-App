@@ -1,7 +1,9 @@
 package com.ale.stylepin.features.pins.presentation.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -12,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ale.stylepin.features.pins.domain.entities.Pin
@@ -25,37 +26,18 @@ fun PinsScreen(
     viewModel: PinsViewModel,
     onNavigateToAddPin: () -> Unit,
     onNavigateToPinDetail: (String) -> Unit,
-    onNavigateToEditPin: (Pin) -> Unit
+    onNavigateToEditPin: (Pin) -> Unit // Mantenemos el parámetro para no romper el NavigationWrapper
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var pinIdToDelete by remember { mutableStateOf<String?>(null) }
 
-    pinIdToDelete?.let { id ->
-        AlertDialog(
-            onDismissRequest = { pinIdToDelete = null },
-            title = { Text("¿Eliminar Pin?") },
-            text = { Text("Esta acción eliminará el outfit permanentemente de tu cuenta.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deletePin(id)
-                    pinIdToDelete = null
-                }) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pinIdToDelete = null }) { Text("Cancelar") }
-            }
-        )
-    }
-
+    // Estado para "jalar y refrescar" (Pull to refresh)
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isLoading,
         onRefresh = { viewModel.loadPins() }
     )
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("StylePin Seasons") }) },
+        topBar = { TopAppBar(title = { Text("StylePin") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = onNavigateToAddPin) {
                 Icon(Icons.Default.Add, contentDescription = "Agregar Pin")
@@ -68,30 +50,28 @@ fun PinsScreen(
                 .fillMaxSize()
                 .pullRefresh(pullRefreshState)
         ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+            // GRID ESCALONADO A 2 COLUMNAS
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(2),
                 contentPadding = PaddingValues(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalItemSpacing = 16.dp, // Espacio hacia abajo
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(uiState.filteredPins, key = { it.id }) { pin ->
                     PinCard(
                         pin = pin,
-                        currentUserId = uiState.currentUserId,
-                        onPinClick = { onNavigateToPinDetail(it) },
-                        onEditClick = {
-                            viewModel.loadPinById(pin.id)
-                            onNavigateToEditPin(pin)
-                        },
-                        onDeleteClick = { pinIdToDelete = it },
-                        onLikeClick = { viewModel.toggleLike(it) }
+                        onPinClick = { onNavigateToPinDetail(it) }
                     )
                 }
             }
 
+            // Indicador de carga inicial
             if (uiState.isLoading && uiState.pins.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
 
+            // Indicador del Pull to Refresh
             PullRefreshIndicator(
                 refreshing = uiState.isLoading,
                 state = pullRefreshState,
