@@ -116,7 +116,7 @@ class BoardsViewModel @Inject constructor(
 
     // ── CRUD Tablero ──────────────────────────────────────────
 
-    fun createBoard(onSuccess: () -> Unit) {
+    fun createBoard(userId: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             val s = _uiState.value
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -132,7 +132,7 @@ class BoardsViewModel @Inject constructor(
         }
     }
 
-    fun updateBoard(boardId: String, onSuccess: () -> Unit) {
+    fun updateBoard(boardId: String, userId: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             val s = _uiState.value
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -149,7 +149,7 @@ class BoardsViewModel @Inject constructor(
         }
     }
 
-    fun deleteBoard(boardId: String) {
+    fun deleteBoard(boardId: String, userId: String) {
         viewModelScope.launch {
             deleteBoardUseCase(boardId).fold(
                 onSuccess = { loadAllBoards() },

@@ -31,9 +31,8 @@ fun ProfileScreen(
     viewModel: ProfileViewModel,
     onBack: () -> Unit,
     onEditProfileClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onCommunityClick: (Int) -> Unit,
-    onPinClick: (String) -> Unit
+    onSettingsClick: () -> Unit, // NUEVO: Para los 3 puntitos
+    onCommunityClick: (Int) -> Unit // NUEVO: Para Seguidores/Siguiendo (0 o 1)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -48,6 +47,7 @@ fun ProfileScreen(
                 },
                 actions = {
                     IconButton(onClick = { /* Acción compartir */ }) { Icon(Icons.Outlined.Share, contentDescription = "Compartir") }
+                    // Funcionalidad de los 3 puntitos agregada
                     IconButton(onClick = onSettingsClick) { Icon(Icons.Outlined.MoreVert, contentDescription = "Más opciones") }
                 }
             )
@@ -91,7 +91,7 @@ fun ProfileScreen(
                         modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp)
                     )
 
-                    // Botón de acción
+                    // Botón de acción (Se quitó el de mensaje, ahora Editar Perfil toma todo el ancho)
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
                         horizontalArrangement = Arrangement.Center
@@ -107,16 +107,18 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Estadísticas
+                    // Estadísticas (Pins, Seguidores, Siguiendo) - ¡Ahora son clickeables!
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // PINS
                         Box(modifier = Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
                             ProfileStatItem(formatStatNumber(profile.pinsCount), "PINS")
                         }
 
+                        // SEGUIDORES (Lleva a la Tab 0)
                         Box(
                             modifier = Modifier
                                 .clip(MaterialTheme.shapes.small)
@@ -127,6 +129,7 @@ fun ProfileScreen(
                             ProfileStatItem(formatStatNumber(profile.followersCount), "SEGUIDORES")
                         }
 
+                        // SIGUIENDO (Lleva a la Tab 1)
                         Box(
                             modifier = Modifier
                                 .clip(MaterialTheme.shapes.small)
@@ -155,10 +158,9 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Contenido de los Tabs
+                    // Aquí iría el contenido de los Tabs (LazyVerticalGrid)
                     Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
                         Text("Contenido de ${listOf("Pins", "Tableros", "Guardados")[selectedTab]}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        // TODO: Implementar LazyVerticalGrid aquí usando onPinClick si es necesario
                     }
                 }
             }

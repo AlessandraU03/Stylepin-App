@@ -183,19 +183,4 @@ class PinRepositoryImpl @Inject constructor(
     companion object {
         private const val TAG = "PinRepositoryImpl"
     }
-    // --- COMENTARIOS ---
-    override suspend fun getComments(pinId: String): List<com.ale.stylepin.features.pins.domain.entities.Comment> {
-        return try {
-            val response = api.getComments(pinId)
-            response.body()?.comments?.map { it.toDomain() } ?: emptyList()
-        } catch (e: Exception) { emptyList() }
-    }
-
-    override suspend fun addComment(pinId: String, text: String): Boolean {
-        return try {
-            val request = com.ale.stylepin.features.pins.data.datasources.remote.model.CreateCommentRequest(pinId, text)
-            api.addComment(request).isSuccessful
-        } catch (e: Exception) { false }
-    }
-
 }
