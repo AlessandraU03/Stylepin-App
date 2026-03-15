@@ -19,6 +19,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// Memoria global estática para forzar el estado en la sesión actual sin importar lo que diga el servidor
+private val localLikedPins = mutableSetOf<String>()
+private val localSavedPins = mutableSetOf<String>()
+
 @HiltViewModel
 class PinsViewModel @Inject constructor(
     private val getPinsUseCase: GetPinsUseCase,
@@ -70,23 +74,18 @@ class PinsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingDetail = true, error = null) }
 
-            // Cargar desde DB local primero para que el like/guardado no desaparezca
-            val localPin = _uiState.value.pins.find { it.id == pinId }
-            if (localPin != null) {
-                _uiState.update { it.copy(isLoadingDetail = false, pinDetail = localPin) }
-            }
-
             getPinByIdUseCase(pinId).fold(
                 onSuccess = { apiPin ->
-                    // Si ya habías dado like o guardado en el celular, respetamos ese estado
-                    val finalPin = if (localPin != null) {
-                        apiPin.copy(
-                            isLikedByMe = localPin.isLikedByMe,
-                            likesCount = localPin.likesCount,
-                            isSavedByMe = localPin.isSavedByMe,
-                            savesCount = localPin.savesCount
-                        )
-                    } else apiPin
+                    // 🔴 LÓGICA INFALIBLE: Si lo guardamos o likeamos en esta sesión, forzamos que se vea así
+                    val forceLiked = localLikedPins.contains(apiPin.id)
+                    val forceSaved = localSavedPins.contains(apiPin.id)
+
+                    val finalPin = apiPin.copy(
+                        isLikedByMe = forceLiked || apiPin.isLikedByMe,
+                        isSavedByMe = forceSaved || apiPin.isSavedByMe,
+                        likesCount = if (forceLiked && !apiPin.isLikedByMe) apiPin.likesCount + 1 else apiPin.likesCount,
+                        savesCount = if (forceSaved && !apiPin.isSavedByMe) apiPin.savesCount + 1 else apiPin.savesCount
+                    )
 
                     _uiState.update { it.copy(isLoadingDetail = false, pinDetail = finalPin) }
                     populateFormFromPin(finalPin)
@@ -100,7 +99,7 @@ class PinsViewModel @Inject constructor(
                     }
                 },
                 onFailure = { e ->
-                    if (localPin == null) _uiState.update { it.copy(isLoadingDetail = false, error = e.message) }
+                    _uiState.update { it.copy(isLoadingDetail = false, error = e.message) }
                 }
             )
         }
@@ -159,21 +158,27 @@ class PinsViewModel @Inject constructor(
         viewModelScope.launch { deletePinUseCase(id).onSuccess { refreshPins() } }
     }
 
-    // --- LIKES Y FOLLOWS ---
+    // --- SOCIAL: LIKES Y FOLLOWS ---
     fun toggleLike(pinId: String) {
         viewModelScope.launch {
             val currentPin = _uiState.value.pinDetail ?: return@launch
             val newLikeState = !currentPin.isLikedByMe
-            val newCount = if (newLikeState) currentPin.likesCount + 1 else currentPin.likesCount - 1
 
-            val updatedPin = currentPin.copy(isLikedByMe = newLikeState, likesCount = newCount)
+            // GUARDAMOS EN MEMORIA CACHÉ
+            if (newLikeState) localLikedPins.add(pinId) else localLikedPins.remove(pinId)
+
+            val updatedPin = currentPin.copy(
+                isLikedByMe = newLikeState,
+                likesCount = if (newLikeState) currentPin.likesCount + 1 else currentPin.likesCount - 1
+            )
+
             _uiState.update { it.copy(pinDetail = updatedPin) }
             pinsRepository.savePinLocal(updatedPin)
 
             toggleLikeUseCase(pinId).onFailure {
-                // Revertimos si falla
+                // Revertimos solo si el servidor falla
+                if (!newLikeState) localLikedPins.add(pinId) else localLikedPins.remove(pinId)
                 _uiState.update { state -> state.copy(pinDetail = currentPin) }
-                pinsRepository.savePinLocal(currentPin)
             }
         }
     }
@@ -222,7 +227,7 @@ class PinsViewModel @Inject constructor(
         }
     }
 
-    // --- GUARDAR EN TABLERO (Ahora no borra tu estado) ---
+    // --- GUARDAR EN TABLERO ---
     fun showSaveDialog() {
         _uiState.update { it.copy(isSaveSheetVisible = true) }
         viewModelScope.launch {
@@ -242,11 +247,11 @@ class PinsViewModel @Inject constructor(
         viewModelScope.launch {
             addPinToBoardUseCase(boardId, currentPin.id).onSuccess {
                 hideSaveDialog()
+                localSavedPins.add(currentPin.id) // GUARDAMOS EN MEMORIA CACHÉ
                 val updatedPin = currentPin.copy(isSavedByMe = true, savesCount = currentPin.savesCount + 1)
 
                 _uiState.update { it.copy(pinDetail = updatedPin) }
                 pinsRepository.savePinLocal(updatedPin)
-                // Se removió el refresh agresivo, tu pin se queda en estado "Guardado" en pantalla
             }
         }
     }
@@ -258,6 +263,7 @@ class PinsViewModel @Inject constructor(
             createBoardUseCase(name = boardName).onSuccess { newBoard ->
                 addPinToBoardUseCase(newBoard.id, currentPin.id).onSuccess {
                     hideSaveDialog()
+                    localSavedPins.add(currentPin.id) // GUARDAMOS EN MEMORIA CACHÉ
                     val updatedPin = currentPin.copy(isSavedByMe = true, savesCount = currentPin.savesCount + 1)
 
                     _uiState.update { it.copy(pinDetail = updatedPin) }
