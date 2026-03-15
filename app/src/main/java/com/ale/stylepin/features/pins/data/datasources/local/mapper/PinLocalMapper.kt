@@ -64,3 +64,34 @@ fun PinEntity.toDomain(): Pin = Pin(
     isLikedByMe = isLikedByMe,
     isSavedByMe = isSavedByMe
 )
+
+// --- NUEVO: Traductor de Pin (Dominio) a PinEntity (Base de datos local) ---
+fun Pin.toEntity(): PinEntity = PinEntity(
+    id = id,
+    userId = userId,
+    username = username,
+    userFullName = userFullName,
+    userAvatarUrl = userAvatarUrl,
+    imageUrl = imageUrl,
+    title = title,
+    description = description,
+    category = category,
+    styles = styles,
+    occasions = occasions,
+    season = season,
+    brands = brands,
+    priceRange = priceRange,
+    whereToBuy = whereToBuy,
+    purchaseLink = purchaseLink,
+    likesCount = likesCount,
+    savesCount = savesCount,
+    commentsCount = commentsCount,
+    viewsCount = viewsCount,
+    colors = colors,
+    tags = tags,
+    isPrivate = isPrivate,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+    isLikedByMe = isLikedByMe,
+    isSavedByMe = isSavedByMe
+)

@@ -28,7 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 
-// Componente para los iconos de estadísticas
+// Componente de los numeritos de abajo (Vistas, Likes, etc.)
 @Composable
 fun PinStatBadge(icon: ImageVector, value: String, label: String, tint: Color = Color.Gray) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -72,14 +72,12 @@ fun PinDetailScreen(
         )
     }
 
-    // --- BOTTOM SHEET PARA GUARDAR EN TABLERO ---
     if (uiState.isSaveSheetVisible) {
         ModalBottomSheet(onDismissRequest = { viewModel.hideSaveDialog() }) {
             Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                 Text("Guardar en tablero", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
 
-                // Crear nuevo tablero
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = newBoardName,
@@ -101,7 +99,6 @@ fun PinDetailScreen(
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
 
-                // Lista de tableros
                 LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                     items(uiState.myBoards) { board ->
                         ListItem(
@@ -145,7 +142,6 @@ fun PinDetailScreen(
             )
         },
         bottomBar = {
-            // Input de Comentarios fijo abajo
             Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
                 Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
@@ -170,7 +166,6 @@ fun PinDetailScreen(
                 val pin = uiState.pinDetail!!
 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    // 1. IMAGEN
                     item {
                         AsyncImage(
                             model = pin.imageUrl,
@@ -180,7 +175,6 @@ fun PinDetailScreen(
                         )
                     }
 
-                    // 2. BOTONES PRINCIPALES (Like, Share, Save)
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -211,7 +205,6 @@ fun PinDetailScreen(
                         }
                     }
 
-                    // 3. TÍTULO Y DESCRIPCIÓN
                     item {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                             Text(pin.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -223,7 +216,6 @@ fun PinDetailScreen(
                         }
                     }
 
-                    // 4. ESTADÍSTICAS DEL PIN (Vistas, Likes, Comentarios, Guardados)
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
@@ -237,7 +229,6 @@ fun PinDetailScreen(
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     }
 
-                    // 5. INFORMACIÓN DEL AUTOR (Sección de Seguir)
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -245,7 +236,10 @@ fun PinDetailScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f).clickable { onNavigateToUserProfile(pin.userId) }) {
-                                val fallbackUrl = "https://ui-avatars.com/api/?name=${pin.userFullName.replace(" ", "+")}&background=random"
+                                // CORRECCIÓN DEL NOMBRE: Si full name está vacío, usa el username
+                                val authorName = pin.userFullName.takeIf { it.isNotBlank() } ?: pin.username
+                                val fallbackUrl = "https://ui-avatars.com/api/?name=${authorName.replace(" ", "+")}&background=random"
+
                                 AsyncImage(
                                     model = pin.userAvatarUrl?.takeIf { it.isNotBlank() } ?: fallbackUrl,
                                     contentDescription = null,
@@ -254,12 +248,11 @@ fun PinDetailScreen(
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Column {
-                                    Text(pin.userFullName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+                                    Text(authorName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
                                     Text("@${pin.username}", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
                                 }
                             }
 
-                            // Botón seguir (Solo si no es mi propio pin)
                             if (pin.userId != uiState.currentUserId) {
                                 Button(
                                     onClick = { viewModel.toggleFollowAuthor() },
@@ -271,7 +264,6 @@ fun PinDetailScreen(
                         }
                     }
 
-                    // 6. COMENTARIOS
                     item {
                         Text("Comentarios (${uiState.comments.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                     }
@@ -283,7 +275,10 @@ fun PinDetailScreen(
                     } else {
                         items(uiState.comments) { comment ->
                             Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth()) {
-                                val fallbackUrl = "https://ui-avatars.com/api/?name=${comment.userFullName.replace(" ", "+")}"
+                                // CORRECCIÓN EN COMENTARIOS: También usa el username si full name viene vacío
+                                val commentAuthorName = comment.userFullName.takeIf { it.isNotBlank() } ?: comment.username
+                                val fallbackUrl = "https://ui-avatars.com/api/?name=${commentAuthorName.replace(" ", "+")}"
+
                                 AsyncImage(
                                     model = comment.userAvatarUrl.takeIf { it.isNotBlank() } ?: fallbackUrl,
                                     contentDescription = null,
@@ -292,7 +287,7 @@ fun PinDetailScreen(
                                 Spacer(Modifier.width(12.dp))
                                 Column {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(comment.userFullName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                        Text(commentAuthorName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                         Spacer(Modifier.width(8.dp))
                                         Text(comment.createdAt.take(10), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                     }
@@ -303,7 +298,6 @@ fun PinDetailScreen(
                         }
                     }
 
-                    // Espacio final para que el input no tape el último comentario
                     item { Spacer(Modifier.height(100.dp)) }
                 }
             }

@@ -66,22 +66,42 @@ class PinsViewModel @Inject constructor(
 
     fun loadPins() = refreshPins()
 
-    // --- DETALLE Y EDICIÓN DEL PIN ---
     fun loadPinById(pinId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingDetail = true, error = null) }
+
+            // Cargar desde DB local primero para que el like/guardado no desaparezca
+            val localPin = _uiState.value.pins.find { it.id == pinId }
+            if (localPin != null) {
+                _uiState.update { it.copy(isLoadingDetail = false, pinDetail = localPin) }
+            }
+
             getPinByIdUseCase(pinId).fold(
-                onSuccess = { pin ->
-                    _uiState.update { it.copy(isLoadingDetail = false, pinDetail = pin) }
-                    populateFormFromPin(pin)
+                onSuccess = { apiPin ->
+                    // Si ya habías dado like o guardado en el celular, respetamos ese estado
+                    val finalPin = if (localPin != null) {
+                        apiPin.copy(
+                            isLikedByMe = localPin.isLikedByMe,
+                            likesCount = localPin.likesCount,
+                            isSavedByMe = localPin.isSavedByMe,
+                            savesCount = localPin.savesCount
+                        )
+                    } else apiPin
+
+                    _uiState.update { it.copy(isLoadingDetail = false, pinDetail = finalPin) }
+                    populateFormFromPin(finalPin)
+                    pinsRepository.savePinLocal(finalPin)
+
                     loadComments(pinId)
-                    if (pin.userId != _uiState.value.currentUserId) {
-                        checkFollowStatusUseCase.execute(pin.userId).onSuccess { isFollowing ->
+                    if (finalPin.userId != _uiState.value.currentUserId) {
+                        checkFollowStatusUseCase.execute(finalPin.userId).onSuccess { isFollowing ->
                             _uiState.update { it.copy(authorIsFollowed = isFollowing) }
                         }
                     }
                 },
-                onFailure = { e -> _uiState.update { it.copy(isLoadingDetail = false, error = e.message) } }
+                onFailure = { e ->
+                    if (localPin == null) _uiState.update { it.copy(isLoadingDetail = false, error = e.message) }
+                }
             )
         }
     }
@@ -89,20 +109,11 @@ class PinsViewModel @Inject constructor(
     private fun populateFormFromPin(pin: Pin) {
         _uiState.update {
             it.copy(
-                title = pin.title,
-                description = pin.description ?: "",
-                imageUrl = pin.imageUrl,
-                selectedCategory = pin.category,
-                selectedSeason = pin.season,
-                isPrivate = pin.isPrivate,
-                styles = pin.styles,
-                occasions = pin.occasions,
-                brands = pin.brands,
-                priceRange = pin.priceRange,
-                whereToBuy = pin.whereToBuy ?: "",
-                purchaseLink = pin.purchaseLink ?: "",
-                colors = pin.colors,
-                tags = pin.tags
+                title = pin.title, description = pin.description ?: "", imageUrl = pin.imageUrl,
+                selectedCategory = pin.category, selectedSeason = pin.season, isPrivate = pin.isPrivate,
+                styles = pin.styles, occasions = pin.occasions, brands = pin.brands,
+                priceRange = pin.priceRange, whereToBuy = pin.whereToBuy ?: "",
+                purchaseLink = pin.purchaseLink ?: "", colors = pin.colors, tags = pin.tags
             )
         }
     }
@@ -133,23 +144,14 @@ class PinsViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             val s = _uiState.value
             val result = if (pinId == null) {
-                addPinUseCase(
-                    s.title, s.imageUrl, s.selectedCategory, s.selectedSeason, s.description,
-                    s.isPrivate, s.styles, s.occasions, s.brands, s.priceRange, s.whereToBuy,
-                    s.purchaseLink, s.colors, s.tags
-                )
+                addPinUseCase(s.title, s.imageUrl, s.selectedCategory, s.selectedSeason, s.description, s.isPrivate, s.styles, s.occasions, s.brands, s.priceRange, s.whereToBuy, s.purchaseLink, s.colors, s.tags)
             } else {
-                updatePinUseCase(
-                    pinId, s.title, s.imageUrl, s.selectedCategory, s.selectedSeason,
-                    s.description, s.isPrivate
-                )
+                updatePinUseCase(pinId, s.title, s.imageUrl, s.selectedCategory, s.selectedSeason, s.description, s.isPrivate)
             }
             result.onSuccess {
                 refreshPins()
                 onSuccess()
-            }.onFailure { e ->
-                _uiState.update { it.copy(isLoading = false, error = e.message) }
-            }
+            }.onFailure { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
         }
     }
 
@@ -157,26 +159,21 @@ class PinsViewModel @Inject constructor(
         viewModelScope.launch { deletePinUseCase(id).onSuccess { refreshPins() } }
     }
 
-    // --- SOCIAL: LIKES, FOLLOWS, COMMENTS ---
+    // --- LIKES Y FOLLOWS ---
     fun toggleLike(pinId: String) {
         viewModelScope.launch {
             val currentPin = _uiState.value.pinDetail ?: return@launch
             val newLikeState = !currentPin.isLikedByMe
+            val newCount = if (newLikeState) currentPin.likesCount + 1 else currentPin.likesCount - 1
 
-            // Actualización UI instantánea para que no parpadee
-            _uiState.update { state ->
-                state.copy(pinDetail = currentPin.copy(
-                    isLikedByMe = newLikeState,
-                    likesCount = if (newLikeState) currentPin.likesCount + 1 else currentPin.likesCount - 1
-                ))
-            }
+            val updatedPin = currentPin.copy(isLikedByMe = newLikeState, likesCount = newCount)
+            _uiState.update { it.copy(pinDetail = updatedPin) }
+            pinsRepository.savePinLocal(updatedPin)
 
-            // Llamada al servidor
-            toggleLikeUseCase(pinId).onSuccess {
-                getPinsUseCase.refresh() // Actualiza caché
-            }.onFailure {
-                // Revertimos si falla el servidor
+            toggleLikeUseCase(pinId).onFailure {
+                // Revertimos si falla
                 _uiState.update { state -> state.copy(pinDetail = currentPin) }
+                pinsRepository.savePinLocal(currentPin)
             }
         }
     }
@@ -214,18 +211,18 @@ class PinsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val newComment = pinsRepository.addComment(pinId, text)
+                val currentPin = _uiState.value.pinDetail!!
+                val updatedPin = currentPin.copy(commentsCount = currentPin.commentsCount + 1)
+
                 _uiState.update {
-                    it.copy(
-                        comments = it.comments + newComment,
-                        commentInput = "",
-                        pinDetail = it.pinDetail?.copy(commentsCount = it.pinDetail.commentsCount + 1) // Suma visualmente 1
-                    )
+                    it.copy(comments = it.comments + newComment, commentInput = "", pinDetail = updatedPin)
                 }
+                pinsRepository.savePinLocal(updatedPin)
             } catch (e: Exception) { }
         }
     }
 
-    // --- GUARDAR EN TABLERO ---
+    // --- GUARDAR EN TABLERO (Ahora no borra tu estado) ---
     fun showSaveDialog() {
         _uiState.update { it.copy(isSaveSheetVisible = true) }
         viewModelScope.launch {
@@ -241,35 +238,30 @@ class PinsViewModel @Inject constructor(
     }
 
     fun savePinToBoard(boardId: String) {
-        val pinId = _uiState.value.pinDetail?.id ?: return
+        val currentPin = _uiState.value.pinDetail ?: return
         viewModelScope.launch {
-            addPinToBoardUseCase(boardId, pinId).onSuccess {
+            addPinToBoardUseCase(boardId, currentPin.id).onSuccess {
                 hideSaveDialog()
-                _uiState.update { state ->
-                    state.copy(pinDetail = state.pinDetail?.copy(
-                        isSavedByMe = true,
-                        savesCount = state.pinDetail.savesCount + 1
-                    ))
-                }
-                getPinsUseCase.refresh()
+                val updatedPin = currentPin.copy(isSavedByMe = true, savesCount = currentPin.savesCount + 1)
+
+                _uiState.update { it.copy(pinDetail = updatedPin) }
+                pinsRepository.savePinLocal(updatedPin)
+                // Se removió el refresh agresivo, tu pin se queda en estado "Guardado" en pantalla
             }
         }
     }
 
     fun createBoardAndSavePin(boardName: String) {
-        val pinId = _uiState.value.pinDetail?.id ?: return
+        val currentPin = _uiState.value.pinDetail ?: return
         if (boardName.isBlank()) return
         viewModelScope.launch {
             createBoardUseCase(name = boardName).onSuccess { newBoard ->
-                addPinToBoardUseCase(newBoard.id, pinId).onSuccess {
+                addPinToBoardUseCase(newBoard.id, currentPin.id).onSuccess {
                     hideSaveDialog()
-                    _uiState.update { state ->
-                        state.copy(pinDetail = state.pinDetail?.copy(
-                            isSavedByMe = true,
-                            savesCount = state.pinDetail.savesCount + 1
-                        ))
-                    }
-                    getPinsUseCase.refresh()
+                    val updatedPin = currentPin.copy(isSavedByMe = true, savesCount = currentPin.savesCount + 1)
+
+                    _uiState.update { it.copy(pinDetail = updatedPin) }
+                    pinsRepository.savePinLocal(updatedPin)
                 }
             }
         }
