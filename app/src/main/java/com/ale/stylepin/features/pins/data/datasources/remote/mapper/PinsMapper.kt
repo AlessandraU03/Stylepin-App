@@ -13,8 +13,10 @@ fun PinDto.toDomain(): Pin = Pin(
     id = id,
     userId = user_id,
     username = user_username,
-    userFullName = user_full_name,
-    userAvatarUrl = user_avatar_url,
+    // 👇 SOLUCIÓN: Si es nulo, usamos su username
+    userFullName = user_full_name ?: user_username,
+    // 👇 PREVENCIÓN: Si no hay avatar, mandamos texto vacío
+    userAvatarUrl = user_avatar_url ?: "",
     userIsVerified = user_is_verified,
     imageUrl = image_url,
     title = title,

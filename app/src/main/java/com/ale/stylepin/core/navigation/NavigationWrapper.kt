@@ -32,6 +32,10 @@ import com.ale.stylepin.features.pins.presentation.screens.PinDetailScreen
 import com.ale.stylepin.features.pins.presentation.screens.PinsScreen
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 
+// Imports de Explore
+import com.ale.stylepin.features.explore.presentation.screens.ExploreScreen
+import com.ale.stylepin.features.explore.presentation.viewmodels.ExploreViewModel
+
 // Imports de Profile y Settings
 import com.ale.stylepin.features.profile.presentation.screens.ProfileScreen
 import com.ale.stylepin.features.profile.presentation.screens.SettingsScreen
@@ -72,7 +76,8 @@ fun NavigationWrapper() {
                     onNavigate = { title ->
                         when (title) {
                             "Inicio"   -> navController.navigate(PinsRoute) { popUpTo(PinsRoute) { inclusive = true } }
-                            "Explorar" -> navController.navigate(BoardsRoute) { popUpTo(PinsRoute) }
+                            // 🔴 CORREGIDO: Ahora va a SearchRoute en lugar de BoardsRoute
+                            "Explorar" -> navController.navigate(SearchRoute) { popUpTo(PinsRoute) }
                             "Alertas"  -> navController.navigate(AlertsRoute) { popUpTo(PinsRoute) }
                             "Perfil"   -> navController.navigate(ProfileRoute) { popUpTo(PinsRoute) }
                         }
@@ -179,7 +184,7 @@ fun NavigationWrapper() {
                 val viewModel: BoardsViewModel = hiltViewModel()
                 val pinsViewModel: PinsViewModel = hiltViewModel()
                 val pinsState by pinsViewModel.uiState.collectAsStateWithLifecycle()
-                
+
                 BoardsScreen(
                     userId = pinsState.currentUserId ?: "",
                     viewModel = viewModel,
@@ -226,7 +231,7 @@ fun NavigationWrapper() {
                 val viewModel: BoardsViewModel = hiltViewModel()
                 val pinsViewModel: PinsViewModel = hiltViewModel()
                 val pinsState by pinsViewModel.uiState.collectAsStateWithLifecycle()
-                
+
                 EditBoardScreen(
                     boardId = route.id,
                     userId = pinsState.currentUserId ?: "",
@@ -235,13 +240,25 @@ fun NavigationWrapper() {
                 )
             }
 
-            // --- PLACEHOLDERS / OTROS ---
+            // --- EXPLORE / SEARCH ---
+            // 🔴 CORREGIDO: Ahora usa la pantalla real de explorar en lugar del Box de texto
             composable<SearchRoute> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Pantalla de Explorar")
-                }
+                val exploreViewModel: ExploreViewModel = hiltViewModel()
+                ExploreScreen(
+                    viewModel = exploreViewModel,
+                    onNavigateToBoardDetail = { boardId ->
+                        navController.navigate(BoardDetailRoute(id = boardId))
+                    },
+                    onNavigateToPinDetail = { pinId ->
+                        navController.navigate(PinDetailRoute(id = pinId))
+                    },
+                    onNavigateToUserProfile = { userId ->
+                        // Lo implementaremos en el próximo paso
+                    }
+                )
             }
 
+            // --- ALERTAS ---
             composable<AlertsRoute> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Pantalla de Alertas")
