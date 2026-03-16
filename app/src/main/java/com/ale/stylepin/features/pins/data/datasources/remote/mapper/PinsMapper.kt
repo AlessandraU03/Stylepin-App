@@ -12,8 +12,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 fun PinDto.toDomain(): Pin = Pin(
     id = id,
     userId = user_id,
-    username = user_username,
-    userFullName = user_full_name ?: user_username,
+    // 👇 PROTECCIÓN EXTREMA CONTRA NOMBRES VACÍOS
+    username = user_username?.takeIf { it.isNotBlank() } ?: "usuario",
+    userFullName = user_full_name?.takeIf { it.isNotBlank() }
+        ?: user_username?.takeIf { it.isNotBlank() }
+        ?: "Usuario Anónimo",
     userAvatarUrl = user_avatar_url ?: "",
     userIsVerified = user_is_verified ?: false,
     imageUrl = image_url ?: "",
@@ -22,7 +25,6 @@ fun PinDto.toDomain(): Pin = Pin(
     category = category ?: "Sin categoría",
     styles = styles ?: emptyList(),
     occasions = occasions ?: emptyList(),
-    // 👇 PROTECCIÓN AÑADIDA PARA SEASON
     season = season ?: "todo_el_ano",
     brands = brands ?: emptyList(),
     priceRange = price_range ?: "bajo_500",

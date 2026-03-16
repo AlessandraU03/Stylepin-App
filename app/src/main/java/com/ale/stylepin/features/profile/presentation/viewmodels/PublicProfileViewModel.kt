@@ -1,5 +1,6 @@
 package com.ale.stylepin.features.profile.presentation.viewmodels
 
+import android.util.Log // <-- Necesario para la consola
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.features.boards.domain.entities.Board
@@ -59,7 +60,10 @@ class PublicProfileViewModel @Inject constructor(
                 _uiState.update { it.copy(publicBoards = publicBoards, isLoading = false) }
 
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message) }
+                // 👇 LA TRAMPA ANTI-PANTALLA BLANCA
+                val errorReal = e.message ?: e.localizedMessage ?: e.javaClass.simpleName
+                Log.e("PERFIL_PUBLICO", "Crash al cargar: $errorReal", e)
+                _uiState.update { it.copy(isLoading = false, error = errorReal) }
             }
         }
     }

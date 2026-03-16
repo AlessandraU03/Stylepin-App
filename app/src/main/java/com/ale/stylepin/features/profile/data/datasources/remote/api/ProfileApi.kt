@@ -3,6 +3,7 @@ package com.ale.stylepin.features.profile.data.datasources.remote.api
 import com.ale.stylepin.features.profile.data.datasources.remote.model.UpdateProfileRequest
 import com.ale.stylepin.features.profile.data.datasources.remote.model.UploadResponse
 import com.ale.stylepin.features.profile.data.datasources.remote.model.UserMeDto
+import com.ale.stylepin.features.profile.data.datasources.remote.model.UserProfileResponse // <-- Importa el nuevo envoltorio
 import com.ale.stylepin.features.profile.data.datasources.remote.model.UserStatsDto
 import okhttp3.MultipartBody
 import retrofit2.Response
@@ -32,6 +33,7 @@ interface ProfileApi {
     @POST("api/v1/upload/avatar")
     suspend fun uploadAvatar(@Part file: MultipartBody.Part): Response<UploadResponse>
 
+    // 👇 CAMBIO: Ahora espera recibir el UserProfileResponse
     @GET("api/v1/users/{id}")
-    suspend fun getUserProfileById(@Path("id") userId: String): Response<UserMeDto>
+    suspend fun getUserProfileById(@Path("id") userId: String): Response<UserProfileResponse>
 }
