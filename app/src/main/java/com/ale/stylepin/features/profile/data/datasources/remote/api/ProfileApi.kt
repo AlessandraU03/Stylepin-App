@@ -13,6 +13,7 @@ import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Part
+import retrofit2.http.Path
 
 interface ProfileApi {
     @GET("api/v1/users/me")
@@ -30,4 +31,7 @@ interface ProfileApi {
     @Multipart
     @POST("api/v1/upload/avatar")
     suspend fun uploadAvatar(@Part file: MultipartBody.Part): Response<UploadResponse>
+
+    @GET("api/v1/users/{id}")
+    suspend fun getUserProfileById(@Path("id") userId: String): Response<UserMeDto>
 }

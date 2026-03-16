@@ -19,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import kotlinx.serialization.Serializable // <-- Importante para la nueva ruta
 
 // Imports de tus pantallas y componentes
 import com.ale.stylepin.core.presentation.components.StylePinBottomBar
@@ -49,12 +50,20 @@ import com.ale.stylepin.features.community.presentation.viewmodels.CommunityView
 import com.ale.stylepin.features.profile.presentation.viewmodels.EditProfileViewModel
 import com.ale.stylepin.features.profile.presentation.screens.EditProfileScreen
 
+// Imports de Public Profile (NUEVOS)
+import com.ale.stylepin.features.profile.presentation.screens.PublicProfileScreen
+import com.ale.stylepin.features.profile.presentation.viewmodels.PublicProfileViewModel
+
 // Imports de Boards
 import com.ale.stylepin.features.boards.presentation.screens.BoardsScreen
 import com.ale.stylepin.features.boards.presentation.screens.BoardDetailScreen
 import com.ale.stylepin.features.boards.presentation.screens.CreateBoardScreen
 import com.ale.stylepin.features.boards.presentation.screens.EditBoardScreen
 import com.ale.stylepin.features.boards.presentation.viewmodels.BoardsViewModel
+
+// Ruta para el perfil de otros usuarios
+@Serializable
+data class OtherUserProfileRoute(val userId: String)
 
 @Composable
 fun NavigationWrapper() {
@@ -76,7 +85,6 @@ fun NavigationWrapper() {
                     onNavigate = { title ->
                         when (title) {
                             "Inicio"   -> navController.navigate(PinsRoute) { popUpTo(PinsRoute) { inclusive = true } }
-                            // 🔴 CORREGIDO: Ahora va a SearchRoute en lugar de BoardsRoute
                             "Explorar" -> navController.navigate(SearchRoute) { popUpTo(PinsRoute) }
                             "Alertas"  -> navController.navigate(AlertsRoute) { popUpTo(PinsRoute) }
                             "Perfil"   -> navController.navigate(ProfileRoute) { popUpTo(PinsRoute) }
@@ -241,7 +249,6 @@ fun NavigationWrapper() {
             }
 
             // --- EXPLORE / SEARCH ---
-            // 🔴 CORREGIDO: Ahora usa la pantalla real de explorar en lugar del Box de texto
             composable<SearchRoute> {
                 val exploreViewModel: ExploreViewModel = hiltViewModel()
                 ExploreScreen(
@@ -253,7 +260,25 @@ fun NavigationWrapper() {
                         navController.navigate(PinDetailRoute(id = pinId))
                     },
                     onNavigateToUserProfile = { userId ->
-                        // Lo implementaremos en el próximo paso
+                        navController.navigate(OtherUserProfileRoute(userId = userId))
+                    }
+                )
+            }
+
+            // --- PUBLIC PROFILE (NUEVO) ---
+            composable<OtherUserProfileRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<OtherUserProfileRoute>()
+                val viewModel: PublicProfileViewModel = hiltViewModel()
+
+                PublicProfileScreen(
+                    userId = route.userId,
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToPinDetail = { pinId ->
+                        navController.navigate(PinDetailRoute(id = pinId))
+                    },
+                    onNavigateToBoardDetail = { boardId ->
+                        navController.navigate(BoardDetailRoute(id = boardId))
                     }
                 )
             }
@@ -279,7 +304,6 @@ fun NavigationWrapper() {
                             navController.navigate(CommunityRoute(initialTab = tabIndex, userId = userId))
                         }
                     },
-                    // Pasamos las lambdas de navegación hacia los Detalles de Pins y Tableros
                     onNavigateToPinDetail = { pinId ->
                         navController.navigate(PinDetailRoute(id = pinId))
                     },

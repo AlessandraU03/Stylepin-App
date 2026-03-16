@@ -31,6 +31,24 @@ class ProfileRepositoryImpl @Inject constructor(
         return mapToDomain(user, stats)
     }
 
+    // 👇 NUEVO: Implementación para traer otros perfiles
+    override suspend fun getProfileById(userId: String): Result<Profile> {
+        return try {
+            val response = api.getUserProfileById(userId)
+            if (response.isSuccessful) {
+                response.body()?.let { user ->
+                    // Usamos stats en 0 temporalmente para que mapee bien (si tu backend tiene endpoint de stats públicos, se agregaría aquí)
+                    val dummyStats = UserStatsDto(totalPins = 0, totalFollowers = 0, totalFollowing = 0)
+                    Result.success(mapToDomain(user, dummyStats))
+                } ?: Result.failure(Exception("Perfil vacío"))
+            } else {
+                Result.failure(Exception("Error al obtener el perfil: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun updateProfile(fullName: String, bio: String, gender: String, avatarUrl: String?): Result<Unit> {
         return try {
             val request = UpdateProfileRequest(
