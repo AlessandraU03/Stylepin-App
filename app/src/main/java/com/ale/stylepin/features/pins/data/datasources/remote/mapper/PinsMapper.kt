@@ -15,31 +15,30 @@ fun PinDto.toDomain(): Pin = Pin(
     username = user_username,
     userFullName = user_full_name ?: user_username,
     userAvatarUrl = user_avatar_url ?: "",
-    userIsVerified = user_is_verified,
-    imageUrl = image_url,
-    title = title,
-    description = description,
-    category = category,
-    // 👇 PROTECCIÓN TOTAL: Si el backend no manda las listas, usamos listas vacías.
+    userIsVerified = user_is_verified ?: false,
+    imageUrl = image_url ?: "",
+    title = title ?: "",
+    description = description ?: "",
+    category = category ?: "Sin categoría",
     styles = styles ?: emptyList(),
     occasions = occasions ?: emptyList(),
-    season = season,
+    // 👇 PROTECCIÓN AÑADIDA PARA SEASON
+    season = season ?: "todo_el_ano",
     brands = brands ?: emptyList(),
-    priceRange = price_range,
+    priceRange = price_range ?: "bajo_500",
     whereToBuy = where_to_buy,
     purchaseLink = purchase_link,
-    likesCount = likes_count,
-    savesCount = saves_count,
-    commentsCount = comments_count,
-    viewsCount = views_count,
-    // 👇 PROTECCIÓN TOTAL: Listas adicionales
+    likesCount = likes_count ?: 0,
+    savesCount = saves_count ?: 0,
+    commentsCount = comments_count ?: 0,
+    viewsCount = views_count ?: 0,
     colors = colors ?: emptyList(),
     tags = tags ?: emptyList(),
-    isPrivate = is_private,
-    createdAt = created_at,
-    updatedAt = updated_at,
-    isLikedByMe = is_liked_by_me,
-    isSavedByMe = is_saved_by_me
+    isPrivate = is_private ?: false,
+    createdAt = created_at ?: "",
+    updatedAt = updated_at ?: "",
+    isLikedByMe = is_liked_by_me ?: false,
+    isSavedByMe = is_saved_by_me ?: false
 )
 
 // ── Domain params → UpdatePinRequest ─────────────────────────
