@@ -28,7 +28,6 @@ fun PinsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Estado para "jalar y refrescar" (Pull to refresh)
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isLoading,
         onRefresh = { viewModel.loadPins() }
@@ -50,7 +49,8 @@ fun PinsScreen(
                 verticalItemSpacing = 16.dp,
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(uiState.filteredPins, key = { it.id }) { pin ->
+                // 👇 AQUÍ ESTABA EL PELIGRO: Quitamos "key = { it.id }" para evitar crashes por duplicados
+                items(uiState.filteredPins) { pin ->
                     PinCard(
                         pin = pin,
                         onPinClick = { onNavigateToPinDetail(it) }

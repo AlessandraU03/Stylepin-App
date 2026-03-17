@@ -33,7 +33,9 @@ interface ProfileApi {
     @POST("api/v1/upload/avatar")
     suspend fun uploadAvatar(@Part file: MultipartBody.Part): Response<UploadResponse>
 
-    // 👇 CAMBIO: Ahora espera recibir el UserProfileResponse
     @GET("api/v1/users/{id}")
     suspend fun getUserProfileById(@Path("id") userId: String): Response<UserProfileResponse>
+
+    @GET("api/v1/users/{user_id}/stats")
+    suspend fun getUserStatsById(@Path("user_id") userId: String): Response<UserStatsDto>
 }

@@ -11,6 +11,7 @@ import com.ale.stylepin.features.pins.data.datasources.remote.mapper.buildPartMa
 import com.ale.stylepin.features.pins.data.datasources.remote.mapper.toDomain
 import com.ale.stylepin.features.pins.data.datasources.remote.mapper.toUpdateRequest
 import com.ale.stylepin.features.pins.data.datasources.remote.model.CreateCommentRequest
+import com.ale.stylepin.features.pins.data.datasources.remote.model.UpdatePinDto
 import com.ale.stylepin.features.pins.domain.entities.Comment
 import com.ale.stylepin.features.pins.domain.entities.Pin
 import com.ale.stylepin.features.pins.domain.repository.PinsRepository
@@ -86,10 +87,29 @@ class PinRepositoryImpl @Inject constructor(
 
     override suspend fun updatePin(
         pinId: String, title: String, imageUrl: String?, category: String,
-        season: String, description: String?, isPrivate: Boolean
+        season: String, description: String?, isPrivate: Boolean,
+        styles: List<String>, occasions: List<String>, brands: List<String>,
+        priceRange: String, whereToBuy: String?, purchaseLink: String?,
+        colors: List<String>, tags: List<String>
     ): Boolean {
         return try {
-            val request = toUpdateRequest(pinId, title, description, category, season, isPrivate, imageUrl)
+            val request = UpdatePinDto(
+                pinId = pinId,
+                title = title,
+                imageUrl = imageUrl,
+                category = category,
+                season = season,
+                description = description,
+                isPrivate = isPrivate,
+                styles = styles,
+                occasions = occasions,
+                brands = brands,
+                priceRange = priceRange,
+                whereToBuy = whereToBuy,
+                purchaseLink = purchaseLink,
+                colors = colors,
+                tags = tags
+            )
             val response = api.updatePin(pinId, request)
             if (response.isSuccessful) response.body()?.let { pinDao.insertPins(listOf(it.toEntity())) }
             response.isSuccessful
@@ -99,7 +119,7 @@ class PinRepositoryImpl @Inject constructor(
     override suspend fun deletePin(pinId: String): Boolean {
         return try {
             val success = api.deletePin(pinId).isSuccessful
-            if(success) pinDao.clearAll() // Forzamos limpieza simple o puedes borrar por ID
+           if (success) pinDao.deleteById(pinId)
             success
         } catch (e: Exception) { false }
     }

@@ -1,13 +1,26 @@
 package com.ale.stylepin.core.data.local
 
 import androidx.room.TypeConverter
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 class Converters {
-    @TypeConverter
-    fun fromList(value: List<String>): String = Json.encodeToString(value)
+    private val gson = Gson()
 
     @TypeConverter
-    fun toList(value: String): List<String> = Json.decodeFromString(value)
+    fun fromList(value: List<String>?): String {
+        // Si la lista viene nula, guardamos una lista vacía de forma segura
+        return gson.toJson(value ?: emptyList<String>())
+    }
+
+    @TypeConverter
+    fun toList(value: String?): List<String> {
+        if (value.isNullOrBlank()) return emptyList()
+        val type = object : TypeToken<List<String>>() {}.type
+        return try {
+            gson.fromJson(value, type) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }

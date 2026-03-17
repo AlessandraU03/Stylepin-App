@@ -10,9 +10,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 // ── API Response → Domain ─────────────────────────────────────
 
 fun PinDto.toDomain(): Pin = Pin(
-    id = id,
-    userId = user_id,
-    // 👇 PROTECCIÓN EXTREMA CONTRA NOMBRES VACÍOS
+    // 👇 SOLUCIÓN: Agregamos ?: "" para proteger de nulos
+    id = id ?: "",
+    userId = user_id ?: "",
     username = user_username?.takeIf { it.isNotBlank() } ?: "usuario",
     userFullName = user_full_name?.takeIf { it.isNotBlank() }
         ?: user_username?.takeIf { it.isNotBlank() }
@@ -53,6 +53,14 @@ fun toUpdateRequest(
     season: String,
     isPrivate: Boolean,
     imageUrl: String?,
+    styles: List<String>,
+    occasions: List<String>,
+    brands: List<String>,
+    priceRange: String,
+    whereToBuy: String?,
+    purchaseLink: String?,
+    colors: List<String>,
+    tags: List<String>
 ): UpdatePinDto = UpdatePinDto(
     pinId = pinId,
     title = title,
@@ -60,7 +68,15 @@ fun toUpdateRequest(
     category = category,
     season = season,
     isPrivate = isPrivate,
-    imageUrl = imageUrl
+    imageUrl = imageUrl,
+    styles = styles,
+    occasions = occasions,
+    brands = brands,
+    priceRange = priceRange,
+    whereToBuy = whereToBuy,
+    purchaseLink = purchaseLink,
+    colors = colors,
+    tags = tags
 )
 
 // ── Multipart map para crear pin ──────────────────────────────

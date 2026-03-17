@@ -121,7 +121,7 @@ fun NavigationWrapper() {
                     viewModel = viewModel,
                     onLoginSuccess = {
                         navController.navigate(PinsRoute) {
-                            popUpTo(LoginRoute) { inclusive = true }
+                            popUpTo<LoginRoute> { inclusive = true }
                         }
                     },
                     onNavigateToRegister = { navController.navigate(RegisterRoute) }
@@ -134,7 +134,7 @@ fun NavigationWrapper() {
                     viewModel = viewModel,
                     onRegisterSuccess = {
                         navController.navigate(PinsRoute) {
-                            popUpTo(RegisterRoute) { inclusive = true }
+                            popUpTo<RegisterRoute> { inclusive = true }
                         }
                     },
                     onNavigateToLogin = { navController.popBackStack() }
@@ -285,9 +285,8 @@ fun NavigationWrapper() {
 
             // --- ALERTAS ---
             composable<AlertsRoute> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Pantalla de Alertas")
-                }
+                val viewModel: com.ale.stylepin.features.community.presentation.viewmodels.AlertsViewModel = hiltViewModel()
+                com.ale.stylepin.features.community.presentation.screens.AlertsScreen(viewModel = viewModel)
             }
 
             // --- PROFILE Y COMMUNITY ---

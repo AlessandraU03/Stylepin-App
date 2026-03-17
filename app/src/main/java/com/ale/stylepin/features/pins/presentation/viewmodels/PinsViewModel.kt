@@ -143,9 +143,15 @@ class PinsViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             val s = _uiState.value
             val result = if (pinId == null) {
-                addPinUseCase(s.title, s.imageUrl, s.selectedCategory, s.selectedSeason, s.description, s.isPrivate, s.styles, s.occasions, s.brands, s.priceRange, s.whereToBuy, s.purchaseLink, s.colors, s.tags)
+                addPinUseCase(
+                    s.title, s.imageUrl, s.selectedCategory, s.selectedSeason, s.description, s.isPrivate,
+                    s.styles, s.occasions, s.brands, s.priceRange, s.whereToBuy, s.purchaseLink, s.colors, s.tags
+                )
             } else {
-                updatePinUseCase(pinId, s.title, s.imageUrl, s.selectedCategory, s.selectedSeason, s.description, s.isPrivate)
+                updatePinUseCase(
+                    pinId, s.title, s.imageUrl, s.selectedCategory, s.selectedSeason, s.description, s.isPrivate,
+                    s.styles, s.occasions, s.brands, s.priceRange, s.whereToBuy, s.purchaseLink, s.colors, s.tags
+                )
             }
             result.onSuccess {
                 refreshPins()

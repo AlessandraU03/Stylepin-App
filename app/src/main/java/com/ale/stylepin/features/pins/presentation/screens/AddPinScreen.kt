@@ -30,6 +30,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.ale.stylepin.features.pins.presentation.components.ChipSelectionGroup
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinFormEvent
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
 import java.io.File
@@ -45,14 +46,9 @@ fun AddPinScreen(viewModel: PinsViewModel, onBack: () -> Unit) {
     var tempImageUri by remember { mutableStateOf<Uri?>(null) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
 
-    // Escuchar notificaciones del WebSocket en tiempo real
     LaunchedEffect(Unit) {
         viewModel.webSocketManager.notifications.collect { notification ->
-            Toast.makeText(
-                context,
-                "Notificación: ${notification.message}",
-                Toast.LENGTH_LONG
-            ).show()
+            Toast.makeText(context, "Notificación: ${notification.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -60,30 +56,18 @@ fun AddPinScreen(viewModel: PinsViewModel, onBack: () -> Unit) {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
-        return FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
+        return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }
 
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { viewModel.onFormEvent(PinFormEvent.ImageUrlChanged(it.toString())) }
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) {
-            tempImageUri?.let { viewModel.onFormEvent(PinFormEvent.ImageUrlChanged(it.toString())) }
-        }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) tempImageUri?.let { viewModel.onFormEvent(PinFormEvent.ImageUrlChanged(it.toString())) }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         if (isGranted) {
             val uri = createImageUri()
             tempImageUri = uri
@@ -134,35 +118,17 @@ fun AddPinScreen(viewModel: PinsViewModel, onBack: () -> Unit) {
         topBar = { TopAppBar(title = { Text("Nuevo Pin") }) }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+            modifier = Modifier.padding(padding).padding(16.dp).verticalScroll(rememberScrollState())
         ) {
-            // Selector de imagen
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, Color.Gray, RoundedCornerShape(12.dp))
-                    .clickable { showImageSourceDialog = true },
+                modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, Color.Gray, RoundedCornerShape(12.dp)).clickable { showImageSourceDialog = true },
                 contentAlignment = Alignment.Center
             ) {
                 if (uiState.imageUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = uiState.imageUrl,
-                        contentDescription = "Imagen seleccionada",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    AsyncImage(model = uiState.imageUrl, contentDescription = "Imagen seleccionada", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Image,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp)
-                        )
+                        Icon(imageVector = Icons.Default.Image, contentDescription = null, modifier = Modifier.size(48.dp))
                         Text("Toca para seleccionar imagen")
                     }
                 }
@@ -187,31 +153,27 @@ fun AddPinScreen(viewModel: PinsViewModel, onBack: () -> Unit) {
                 minLines = 3
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = uiState.selectedCategory,
-                onValueChange = { viewModel.onFormEvent(PinFormEvent.CategoryChanged(it)) },
-                label = { Text("Categoría (outfit_completo, calzado, etc.) *") },
-                modifier = Modifier.fillMaxWidth()
+            ChipSelectionGroup(
+                title = "Categoría *",
+                options = mapOf("outfit_completo" to "Outfit Completo", "prenda_individual" to "Prenda Individual", "accesorio" to "Accesorio", "calzado" to "Calzado"),
+                selectedOption = uiState.selectedCategory,
+                onOptionSelected = { viewModel.onFormEvent(PinFormEvent.CategoryChanged(it)) }
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = uiState.selectedSeason,
-                onValueChange = { viewModel.onFormEvent(PinFormEvent.SeasonChanged(it)) },
-                label = { Text("Temporada (todo_el_ano, verano, etc.)") },
-                modifier = Modifier.fillMaxWidth()
+            ChipSelectionGroup(
+                title = "Temporada",
+                options = mapOf("todo_el_ano" to "Todo el año", "primavera" to "Primavera", "verano" to "Verano", "otono" to "Otoño", "invierno" to "Invierno"),
+                selectedOption = uiState.selectedSeason,
+                onOptionSelected = { viewModel.onFormEvent(PinFormEvent.SeasonChanged(it)) }
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = uiState.priceRange,
-                onValueChange = { viewModel.onFormEvent(PinFormEvent.PriceRangeChanged(it)) },
-                label = { Text("Rango de precio (bajo_500, etc.)") },
-                modifier = Modifier.fillMaxWidth()
+            ChipSelectionGroup(
+                title = "Rango de precio",
+                options = mapOf("bajo_500" to "Bajo $500", "500_1000" to "$500 - $1000", "1000_2000" to "$1000 - $2000", "mas_2000" to "Más de $2000"),
+                selectedOption = uiState.priceRange,
+                onOptionSelected = { viewModel.onFormEvent(PinFormEvent.PriceRangeChanged(it)) }
             )
 
             Spacer(Modifier.height(8.dp))
@@ -234,14 +196,8 @@ fun AddPinScreen(viewModel: PinsViewModel, onBack: () -> Unit) {
 
             Spacer(Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = uiState.isPrivate,
-                    onCheckedChange = { viewModel.onFormEvent(PinFormEvent.IsPrivateChanged(it)) }
-                )
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = uiState.isPrivate, onCheckedChange = { viewModel.onFormEvent(PinFormEvent.IsPrivateChanged(it)) })
                 Text("¿Hacer este pin privado?")
             }
 
@@ -250,22 +206,13 @@ fun AddPinScreen(viewModel: PinsViewModel, onBack: () -> Unit) {
             Button(
                 onClick = { viewModel.savePin { onBack() } },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading && uiState.title.isNotBlank() && uiState.imageUrl.isNotEmpty()
+                enabled = !uiState.isLoading && uiState.title.isNotBlank() && uiState.imageUrl.isNotEmpty() && uiState.selectedCategory.isNotBlank()
             ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                } else {
-                    Text("Publicar Outfit")
-                }
+                if (uiState.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                else Text("Publicar Outfit")
             }
 
-            uiState.error?.let { error ->
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
+            uiState.error?.let { error -> Text(text = error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
         }
     }
 }

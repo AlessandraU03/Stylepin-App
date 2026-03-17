@@ -5,33 +5,36 @@ import com.ale.stylepin.features.pins.data.datasources.local.entities.PinEntity
 import com.ale.stylepin.features.pins.domain.entities.Pin
 
 fun PinDto.toEntity(): PinEntity = PinEntity(
-    id = id,
-    userId = user_id,
-    username = user_username,
-    userFullName = user_full_name,
+    id = id ?: "",
+    userId = user_id ?: "",
+    username = user_username?.takeIf { it.isNotBlank() } ?: "usuario",
+    userFullName = user_full_name?.takeIf { it.isNotBlank() }
+        ?: user_username?.takeIf { it.isNotBlank() }
+        ?: "Usuario Anónimo",
     userAvatarUrl = user_avatar_url,
-    imageUrl = image_url,
-    title = title,
+    userIsVerified = user_is_verified ?: false,
+    imageUrl = image_url ?: "",
+    title = title ?: "",
     description = description,
-    category = category,
-    styles = styles,
-    occasions = occasions,
-    season = season,
-    brands = brands,
-    priceRange = price_range,
+    category = category ?: "outfit_completo",
+    styles = styles ?: emptyList(),
+    occasions = occasions ?: emptyList(),
+    season = season ?: "todo_el_ano",
+    brands = brands ?: emptyList(),
+    priceRange = price_range ?: "bajo_500",
     whereToBuy = where_to_buy,
     purchaseLink = purchase_link,
-    likesCount = likes_count,
-    savesCount = saves_count,
-    commentsCount = comments_count,
-    viewsCount = views_count,
-    colors = colors,
-    tags = tags,
-    isPrivate = is_private,
-    createdAt = created_at,
-    updatedAt = updated_at,
-    isLikedByMe = is_liked_by_me,
-    isSavedByMe = is_saved_by_me
+    likesCount = likes_count ?: 0,
+    savesCount = saves_count ?: 0,
+    commentsCount = comments_count ?: 0,
+    viewsCount = views_count ?: 0,
+    colors = colors ?: emptyList(),
+    tags = tags ?: emptyList(),
+    isPrivate = is_private ?: false,
+    createdAt = created_at ?: "",
+    updatedAt = updated_at ?: "",
+    isLikedByMe = is_liked_by_me ?: false,
+    isSavedByMe = is_saved_by_me ?: false
 )
 
 fun PinEntity.toDomain(): Pin = Pin(
@@ -39,8 +42,8 @@ fun PinEntity.toDomain(): Pin = Pin(
     userId = userId,
     username = username,
     userFullName = userFullName,
-    userAvatarUrl = userAvatarUrl,
-    userIsVerified = false, // Opcional: podrías guardarlo en el entity si es necesario
+    userAvatarUrl = userAvatarUrl ?: "",
+    userIsVerified = userIsVerified,
     imageUrl = imageUrl,
     title = title,
     description = description,
@@ -65,13 +68,13 @@ fun PinEntity.toDomain(): Pin = Pin(
     isSavedByMe = isSavedByMe
 )
 
-// --- NUEVO: Traductor de Pin (Dominio) a PinEntity (Base de datos local) ---
 fun Pin.toEntity(): PinEntity = PinEntity(
     id = id,
     userId = userId,
     username = username,
     userFullName = userFullName,
     userAvatarUrl = userAvatarUrl,
+    userIsVerified = userIsVerified,
     imageUrl = imageUrl,
     title = title,
     description = description,

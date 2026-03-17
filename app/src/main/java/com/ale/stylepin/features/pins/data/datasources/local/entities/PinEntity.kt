@@ -10,6 +10,7 @@ data class PinEntity(
     val username: String,
     val userFullName: String,
     val userAvatarUrl: String?,
+    val userIsVerified: Boolean = false,
     val imageUrl: String,
     val title: String,
     val description: String?,

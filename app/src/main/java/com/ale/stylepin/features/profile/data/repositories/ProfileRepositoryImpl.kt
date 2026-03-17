@@ -35,16 +35,16 @@ class ProfileRepositoryImpl @Inject constructor(
         return try {
             val response = api.getUserProfileById(userId)
             if (response.isSuccessful) {
-                // 👇 Desempaquetamos el "user" del response
                 val wrappedData = response.body()
                 wrappedData?.user?.let { userDto ->
-                    // 👇 CORRECCIÓN: Pasamos 0 directo para evitar el error de Kotlin
-                    val dummyStats = UserStatsDto(
-                        totalPins = 0,
-                        totalFollowers = 0,
-                        totalFollowing = 0
-                    )
-                    Result.success(mapToDomain(userDto, dummyStats))
+                    // 👇 AHORA SÍ BUSCAMOS LAS ESTADÍSTICAS REALES
+                    val statsResponse = api.getUserStatsById(userId)
+                    val realStats = if (statsResponse.isSuccessful) {
+                        statsResponse.body() ?: UserStatsDto(0, 0, 0)
+                    } else {
+                        UserStatsDto(0, 0, 0)
+                    }
+                    Result.success(mapToDomain(userDto, realStats))
                 } ?: Result.failure(Exception("Perfil vacío"))
             } else {
                 Result.failure(Exception("Error al obtener el perfil: ${response.code()}"))

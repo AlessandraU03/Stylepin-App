@@ -12,6 +12,9 @@ interface PinDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPins(pins: List<PinEntity>)
 
+    @Query("DELETE FROM pins WHERE id = :pinId")
+    suspend fun deleteById(pinId: String)
+
     @Query("DELETE FROM pins")
     suspend fun clearAll()
 }
