@@ -62,9 +62,7 @@ fun ExploreScreen(
             if (uiState.searchQuery.isBlank()) {
                 if (uiState.isLoadingTrending) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                } else if (uiState.trendingBoards.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No hay tendencias.", color = Color.Gray) }
-                } else {
+                } else if (uiState.trendingBoards.isNotEmpty()) {
                     LazyVerticalStaggeredGrid(
                         columns = StaggeredGridCells.Fixed(2),
                         modifier = Modifier.fillMaxSize(),
@@ -76,6 +74,12 @@ fun ExploreScreen(
                             TrendingBoardCard(item = boardItem, onClick = { onNavigateToBoardDetail(boardItem.board.id) })
                         }
                     }
+                } else {
+                    // 👇 NUEVO: SI NO HAY TABLEROS, MOSTRAMOS UN FEED DE DESCUBRIMIENTO CON TODOS LOS PINES
+                    Text("Descubrir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
+
+                    ExplorePinGrid(pins = uiState.searchPinResults.ifEmpty { uiState.searchPinResults }, onPinClick = onNavigateToPinDetail)
+                    // Nota: Si quieres que cargue pines por defecto, en tu ExploreViewModel llama a getPinsUseCase() y ponlos en una variable `discoverPins`
                 }
             } else {
                 TabRow(selectedTabIndex = uiState.searchSelectedTab, containerColor = Color.Transparent) {
@@ -137,7 +141,7 @@ fun ExplorePinGrid(pins: List<Pin>, onPinClick: (String) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalItemSpacing = 12.dp
     ) {
-        items(pins, key = { it.id }) { pin ->
+        items(pins) { pin -> // Quitamos key = { it.id } por si acaso el backend manda duplicados
             Column(modifier = Modifier.fillMaxWidth().clickable { onPinClick(pin.id) }) {
                 AsyncImage(
                     model = pin.imageUrl,

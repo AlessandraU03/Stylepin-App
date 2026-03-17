@@ -1,6 +1,6 @@
 package com.ale.stylepin.features.profile.presentation.viewmodels
 
-import android.util.Log // <-- Necesario para la consola
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.features.boards.domain.entities.Board
@@ -42,7 +42,6 @@ class PublicProfileViewModel @Inject constructor(
     fun loadProfile(userId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-
             try {
                 val profile = getProfileUseCase.execute(userId)
                 _uiState.update { it.copy(profile = profile) }
@@ -52,15 +51,12 @@ class PublicProfileViewModel @Inject constructor(
                 }
 
                 val allPins = getPinsUseCase().getOrNull() ?: emptyList()
-                val userPins = allPins.filter { it.userId == userId && !it.isPrivate }
-                _uiState.update { it.copy(publicPins = userPins) }
+                _uiState.update { it.copy(publicPins = allPins.filter { pin -> pin.userId == userId && !pin.isPrivate }) }
 
                 val userBoards = getUserBoardsUseCase(userId).getOrNull() ?: emptyList()
-                val publicBoards = userBoards.filter { !it.isPrivate }
-                _uiState.update { it.copy(publicBoards = publicBoards, isLoading = false) }
+                _uiState.update { it.copy(publicBoards = userBoards.filter { board -> !board.isPrivate }, isLoading = false) }
 
             } catch (e: Exception) {
-                // 👇 LA TRAMPA ANTI-PANTALLA BLANCA
                 val errorReal = e.message ?: e.localizedMessage ?: e.javaClass.simpleName
                 Log.e("PERFIL_PUBLICO", "Crash al cargar: $errorReal", e)
                 _uiState.update { it.copy(isLoading = false, error = errorReal) }
@@ -70,13 +66,19 @@ class PublicProfileViewModel @Inject constructor(
 
     fun toggleFollow() {
         viewModelScope.launch {
-            val userId = _uiState.value.profile?.id ?: return@launch
+            val currentProfile = _uiState.value.profile ?: return@launch
             val currentlyFollowing = _uiState.value.isFollowing
+            val userId = currentProfile.id
 
-            _uiState.update { it.copy(isFollowing = !currentlyFollowing) }
+            // 👇 LÓGICA OPTIMISTA: Sumamos o restamos 1 al instante
+            val newFollowersCount = if (currentlyFollowing) currentProfile.followersCount - 1 else currentProfile.followersCount + 1
+            val updatedProfile = currentProfile.copy(followersCount = newFollowersCount)
+
+            _uiState.update { it.copy(isFollowing = !currentlyFollowing, profile = updatedProfile) }
 
             toggleFollowUseCase.execute(userId, currentlyFollowing).onFailure {
-                _uiState.update { it.copy(isFollowing = currentlyFollowing) }
+                // Si falla el internet, lo regresamos a como estaba
+                _uiState.update { it.copy(isFollowing = currentlyFollowing, profile = currentProfile) }
             }
         }
     }

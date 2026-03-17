@@ -74,7 +74,7 @@ fun StatItemProfile(value: String, label: String, onClick: (() -> Unit)? = null)
         Text(
             text = label.uppercase(),
             style = MaterialTheme.typography.labelSmall,
-            color = Color.Gray, // Usamos Color.Gray para asegurar contraste
+            color = Color.Gray,
             letterSpacing = 1.sp,
             fontWeight = FontWeight.Bold
         )
@@ -123,8 +123,8 @@ fun ProfileScreen(
     val boardsGridState = rememberLazyGridState()
     val savedGridState = rememberLazyStaggeredGridState()
 
-    //AUMENTAMOS LA ALTURA PARA QUE QUEPAN LAS ESTADÍSTICAS
-    val profileInfoHeight = 340.dp
+    // 👇 AUMENTAMOS LA ALTURA PARA QUE TODO QUEPA (Antes 340, ahora 380)
+    val profileInfoHeight = 380.dp
     val tabHeight = 48.dp
 
     val density = LocalDensity.current
@@ -137,29 +137,13 @@ fun ProfileScreen(
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val delta = available.y
-
-                if (delta < 0) { // Al deslizar hacia arriba
-                    // VERIFICACIÓN: Solo deslizar si hay suficiente contenido en la lista activa
-                    val canScroll = when (selectedTab) {
-                        0 -> pinsGridState.canScrollForward
-                        1 -> boardsGridState.canScrollForward
-                        2 -> savedGridState.canScrollForward
-                        else -> false
-                    }
-
-                    // Bloqueo: Si no se puede scrollear y el header está expandido, no hace nada
-                    if (!canScroll && headerOffsetPx == 0f) {
-                        return Offset.Zero
-                    }
-
+                if (delta < 0) { // 👇 QUITAMOS LA RESTRICCIÓN DE SCROLL, AHORA SIEMPRE DESLIZA
                     val newOffset = headerOffsetPx + delta
                     val clamped = newOffset.coerceIn(-profileInfoHeightPx, 0f)
                     val consumed = clamped - headerOffsetPx
                     headerOffsetPx = clamped
-
                     return Offset(0f, consumed)
                 }
-
                 return Offset.Zero
             }
 
@@ -271,7 +255,8 @@ fun ProfileScreen(
                             }
 
                             Spacer(Modifier.height(16.dp))
-                            // FILA DE ESTADÍSTICAS (Corregida con los textos visibles)
+
+                            // FILA DE ESTADÍSTICAS
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -299,7 +284,7 @@ fun ProfileScreen(
 }
 
 // -------------------------------------------------------------------------
-// COMPONENTES MODULARES (Sin Padding Top Extremo)
+// COMPONENTES MODULARES
 // -------------------------------------------------------------------------
 
 @Composable

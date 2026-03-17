@@ -50,8 +50,8 @@ fun PublicProfileScreen(
 
     LaunchedEffect(userId) { viewModel.loadProfile(userId) }
 
-    // --- LÓGICA DE SCROLL EXACTAMENTE IGUAL AL PERFIL PERSONAL ---
-    val profileInfoHeight = 320.dp
+    // 👇 AUMENTAMOS LA ALTURA PARA QUE TODO QUEPA (Antes 320, ahora 380)
+    val profileInfoHeight = 380.dp
     val tabHeight = 48.dp
     val density = LocalDensity.current
     val profileInfoHeightPx = with(density) { profileInfoHeight.toPx() }
@@ -62,7 +62,7 @@ fun PublicProfileScreen(
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val delta = available.y
-                if (delta < 0) {
+                if (delta < 0) { // 👇 QUITAMOS LA RESTRICCIÓN DE SCROLL, AHORA SIEMPRE DESLIZA
                     val newOffset = headerOffsetPx + delta
                     val clamped = newOffset.coerceIn(-profileInfoHeightPx, 0f)
                     val consumed = clamped - headerOffsetPx
@@ -197,9 +197,10 @@ fun PublicProfileScreen(
 
                             // ESTADÍSTICAS REALES
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                StatItemProfile(value = "${profile.pinsCount}", label = "Pins", onClick = null)
-                                StatItemProfile(value = "${profile.followersCount}", label = "Seguidores", onClick = null)
-                                StatItemProfile(value = "${profile.followingCount}", label = "Siguiendo", onClick = null)
+                                // Llamamos a StatItemProfile en lugar de ProfileStatItem
+                                StatItemProfile(value = "${profile.pinsCount}", label = "Pins")
+                                StatItemProfile(value = "${profile.followersCount}", label = "Seguidores")
+                                StatItemProfile(value = "${profile.followingCount}", label = "Siguiendo")
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
