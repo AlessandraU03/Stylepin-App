@@ -13,6 +13,7 @@ import kotlinx.serialization.Serializable
 @Serializable object EditProfileRoute
 @Serializable object AddPinRoute
 
+@Serializable object NotificationsRoute 
 @Serializable
 data class PinDetailRoute(
     val id: String

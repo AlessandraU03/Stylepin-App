@@ -1,14 +1,11 @@
 package com.ale.stylepin.core.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -19,9 +16,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import kotlinx.serialization.Serializable // <-- Importante para la nueva ruta
+import kotlinx.serialization.Serializable
 
-// Imports de tus pantallas y componentes
 import com.ale.stylepin.core.presentation.components.StylePinBottomBar
 import com.ale.stylepin.features.auth.presentation.screens.LoginScreen
 import com.ale.stylepin.features.auth.presentation.screens.RegisterScreen
@@ -32,36 +28,26 @@ import com.ale.stylepin.features.pins.presentation.screens.EditPinScreen
 import com.ale.stylepin.features.pins.presentation.screens.PinDetailScreen
 import com.ale.stylepin.features.pins.presentation.screens.PinsScreen
 import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
-
-// Imports de Explore
 import com.ale.stylepin.features.explore.presentation.screens.ExploreScreen
 import com.ale.stylepin.features.explore.presentation.viewmodels.ExploreViewModel
-
-// Imports de Profile y Settings
 import com.ale.stylepin.features.profile.presentation.screens.ProfileScreen
 import com.ale.stylepin.features.profile.presentation.screens.SettingsScreen
 import com.ale.stylepin.features.profile.presentation.viewmodels.ProfileViewModel
 import com.ale.stylepin.features.profile.presentation.viewmodels.SettingsViewModel
-
-// Imports de Community
 import com.ale.stylepin.features.community.presentation.screens.CommunityScreen
 import com.ale.stylepin.features.community.presentation.viewmodels.CommunityViewModel
-
 import com.ale.stylepin.features.profile.presentation.viewmodels.EditProfileViewModel
 import com.ale.stylepin.features.profile.presentation.screens.EditProfileScreen
-
-// Imports de Public Profile (NUEVOS)
 import com.ale.stylepin.features.profile.presentation.screens.PublicProfileScreen
 import com.ale.stylepin.features.profile.presentation.viewmodels.PublicProfileViewModel
-
-// Imports de Boards
 import com.ale.stylepin.features.boards.presentation.screens.BoardsScreen
 import com.ale.stylepin.features.boards.presentation.screens.BoardDetailScreen
 import com.ale.stylepin.features.boards.presentation.screens.CreateBoardScreen
 import com.ale.stylepin.features.boards.presentation.screens.EditBoardScreen
 import com.ale.stylepin.features.boards.presentation.viewmodels.BoardsViewModel
+import com.ale.stylepin.features.notifications.presentation.screens.NotificationsScreen
+import com.ale.stylepin.features.notifications.presentation.viewmodels.NotificationsViewModel // ← NUEVO
 
-// Ruta para el perfil de otros usuarios
 @Serializable
 data class OtherUserProfileRoute(val userId: String)
 
@@ -75,7 +61,8 @@ fun NavigationWrapper() {
             currentDestination?.hasRoute(SearchRoute::class) == true ||
             currentDestination?.hasRoute(AlertsRoute::class) == true ||
             currentDestination?.hasRoute(ProfileRoute::class) == true ||
-            currentDestination?.hasRoute(BoardsRoute::class) == true
+            currentDestination?.hasRoute(BoardsRoute::class) == true ||
+            currentDestination?.hasRoute(NotificationsRoute::class) == true  // ← NUEVO
 
     Scaffold(
         bottomBar = {
@@ -84,10 +71,10 @@ fun NavigationWrapper() {
                     currentRoute = currentDestination?.route,
                     onNavigate = { title ->
                         when (title) {
-                            "Inicio"   -> navController.navigate(PinsRoute) { popUpTo(PinsRoute) { inclusive = true } }
-                            "Explorar" -> navController.navigate(SearchRoute) { popUpTo(PinsRoute) }
-                            "Alertas"  -> navController.navigate(AlertsRoute) { popUpTo(PinsRoute) }
-                            "Perfil"   -> navController.navigate(ProfileRoute) { popUpTo(PinsRoute) }
+                            "Inicio"          -> navController.navigate(PinsRoute) { popUpTo(PinsRoute) { inclusive = true } }
+                            "Explorar"        -> navController.navigate(SearchRoute) { popUpTo(PinsRoute) }
+                            "Notificaciones"  -> navController.navigate(NotificationsRoute) { popUpTo(PinsRoute) }  // ← NUEVO
+                            "Perfil"          -> navController.navigate(ProfileRoute) { popUpTo(PinsRoute) }
                         }
                     }
                 )
@@ -265,11 +252,10 @@ fun NavigationWrapper() {
                 )
             }
 
-            // --- PUBLIC PROFILE (NUEVO) ---
+            // --- PUBLIC PROFILE ---
             composable<OtherUserProfileRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<OtherUserProfileRoute>()
                 val viewModel: PublicProfileViewModel = hiltViewModel()
-
                 PublicProfileScreen(
                     userId = route.userId,
                     viewModel = viewModel,
@@ -289,6 +275,15 @@ fun NavigationWrapper() {
                 com.ale.stylepin.features.community.presentation.screens.AlertsScreen(viewModel = viewModel)
             }
 
+            // --- NOTIFICATIONS ---  ← NUEVO
+            composable<NotificationsRoute> {
+                val viewModel: NotificationsViewModel = hiltViewModel()
+                NotificationsScreen(
+                    onBack = { navController.popBackStack() },
+                    viewModel = viewModel
+                )
+            }
+
             // --- PROFILE Y COMMUNITY ---
             composable<ProfileRoute> {
                 val viewModel: ProfileViewModel = hiltViewModel()
@@ -299,7 +294,7 @@ fun NavigationWrapper() {
                     onSettingsClick = { navController.navigate(SettingsRoute) },
                     onCommunityClick = { tabIndex ->
                         val userId = viewModel.uiState.value.profile?.id
-                        if(userId != null) {
+                        if (userId != null) {
                             navController.navigate(CommunityRoute(initialTab = tabIndex, userId = userId))
                         }
                     },

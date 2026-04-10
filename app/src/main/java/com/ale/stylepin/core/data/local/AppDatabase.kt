@@ -8,7 +8,7 @@ import com.ale.stylepin.features.pins.data.datasources.local.entities.PinEntity
 
 @Database(
     entities = [PinEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

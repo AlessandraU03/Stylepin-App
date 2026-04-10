@@ -9,7 +9,6 @@ class Converters {
 
     @TypeConverter
     fun fromList(value: List<String>?): String {
-        // Si la lista viene nula, guardamos una lista vacía de forma segura
         return gson.toJson(value ?: emptyList<String>())
     }
 

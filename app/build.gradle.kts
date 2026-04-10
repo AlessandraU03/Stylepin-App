@@ -9,6 +9,7 @@ plugins {
     // Activa Hilt y KSP
     alias(libs.plugins.devtools.ksp)
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -96,6 +97,8 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)                    // Integración con Jetpack Compose
     ksp(libs.hilt.compiler)
+
+    implementation(libs.firebase.messaging)
 
     // Room
     implementation(libs.androidx.room.runtime)
