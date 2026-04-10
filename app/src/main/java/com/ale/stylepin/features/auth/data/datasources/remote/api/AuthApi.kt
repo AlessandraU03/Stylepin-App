@@ -13,4 +13,5 @@ interface AuthApi {
 
     @POST("api/v1/auth/register")
     suspend fun register(@Body request: RegisterRequest): AuthResponse
+
 }

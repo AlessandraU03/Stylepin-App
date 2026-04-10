@@ -42,4 +42,17 @@ class CommunityRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override suspend fun checkFollowStatus(targetUserId: String): Result<Boolean> {
+        return try {
+            val response = api.getFollowStatus(targetUserId)
+            if (response.isSuccessful) {
+                Result.success(response.body()?.is_following == true)
+            } else {
+                Result.failure(Exception("Error al checar status"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

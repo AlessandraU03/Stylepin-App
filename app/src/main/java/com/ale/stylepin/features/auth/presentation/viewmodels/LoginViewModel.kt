@@ -1,5 +1,6 @@
 package com.ale.stylepin.features.auth.presentation.viewmodels
 
+import android.os.Build
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,18 +8,22 @@ import com.ale.stylepin.core.hardware.domain.BiometricManager
 import com.ale.stylepin.core.hardware.domain.FlashManager
 import com.ale.stylepin.features.auth.domain.usecases.LoginUseCase
 import com.ale.stylepin.features.auth.presentation.screens.AuthUiState
+import com.ale.stylepin.features.notifications.domain.usecases.SendFCMTokenUseCase
+import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
     private val biometricManager: BiometricManager,
-    private val flashManager: FlashManager
+    private val flashManager: FlashManager,
+    private val sendFCMTokenUseCase: SendFCMTokenUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -38,6 +43,10 @@ class LoginViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(isLoading = false, token = result.token, isLoginSuccess = true)
                 }
+                
+                // ✅ REGISTRAR FCM TOKEN DESPUÉS DEL LOGIN
+                registerFCMToken()
+                
                 if (flashManager.hasFlash()) {
                     flashManager.blink()
                 }
@@ -49,10 +58,32 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    // ✅ REGISTRAR FCM TOKEN
+    private fun registerFCMToken() {
+        viewModelScope.launch {
+            try {
+                println("📱 Iniciando registro de FCM Token...")
+                
+                // Obtener token de Firebase
+                val fcmToken = FirebaseMessaging.getInstance().token.await()
+                println("🔑 FCM Token obtenido: ${fcmToken.take(30)}...")
+                
+                // Enviar al backend
+                val deviceName = Build.MODEL
+                sendFCMTokenUseCase.execute(fcmToken, deviceName)
+                
+                println("✅ FCM Token registrado exitosamente")
+            } catch (e: Exception) {
+                println("❌ Error registrando FCM Token: ${e.message}")
+                // ✅ NO cerrar la sesión si falla el FCM, solo log
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun canUseBiometrics(): Boolean = biometricManager.canAuthenticate()
 
     fun loginWithBiometrics(activity: FragmentActivity) {
-        // Validación: Solo permitir biometría si hay una sesión previa
         if (!loginUseCase.hasStoredSession()) {
             _uiState.update { 
                 it.copy(error = "Debes iniciar sesión con contraseña al menos una vez para activar el acceso con huella.") 
@@ -67,6 +98,8 @@ class LoginViewModel @Inject constructor(
             onSuccess = {
                 _uiState.update { it.copy(isLoginSuccess = true) }
                 viewModelScope.launch {
+                    // ✅ REGISTRAR FCM TOKEN TAMBIÉN EN BIOMETRÍA
+                    registerFCMToken()
                     if (flashManager.hasFlash()) flashManager.blink()
                 }
             },

@@ -33,7 +33,9 @@ import com.ale.stylepin.features.pins.domain.entities.Pin
 fun BoardDetailScreen(
     boardId: String,
     viewModel: BoardsViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onPinClick: (String) -> Unit,
+    onEditBoard: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -47,7 +49,14 @@ fun BoardDetailScreen(
         topBar = {
             TopAppBar(
                 title = { Text(uiState.boardDetail?.name ?: "Tablero") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Volver") } }
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Volver") } },
+                actions = {
+                    if (uiState.boardDetail?.isOwner == true) {
+                        IconButton(onClick = { onEditBoard(boardId) }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar Tablero")
+                        }
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -116,7 +125,9 @@ fun BoardDetailScreen(
                                                 pinDetail = pinDetail,
                                                 notes = boardPin.notes,
                                                 isOwner = board.isOwner,
-                                                onDelete = { viewModel.removePinFromBoard(boardId, boardPin.pinId) }
+                                                onPinClick = { onPinClick(boardPin.pinId) },
+                                                onDelete = { viewModel.removePinFromBoard(boardId, boardPin.pinId) },
+                                                onLikeClick = { /* Implementado vía PinsViewModel o BoardsViewModel si se requiere */ }
                                             )
                                         }
                                     }
@@ -217,12 +228,15 @@ fun BoardPinCard(
     pinDetail: Pin?,
     notes: String?,
     isOwner: Boolean,
-    onDelete: () -> Unit
+    onPinClick: () -> Unit,
+    onDelete: () -> Unit,
+    onLikeClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(4.dp),
+            .padding(4.dp)
+            .clickable { onPinClick() },
         shape = RoundedCornerShape(12.dp)
     ) {
         Column {
@@ -234,6 +248,18 @@ fun BoardPinCard(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
+                    
+                    // Botón de Like pequeño en la card del tablero
+                    Icon(
+                        imageVector = if (pinDetail.isLikedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (pinDetail.isLikedByMe) Color.Red else Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(6.dp)
+                            .size(18.dp)
+                    )
+
                 } else {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -262,15 +288,28 @@ fun BoardPinCard(
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Bold
                 )
-                if (!notes.isNullOrBlank()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = notes,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (!notes.isNullOrBlank()) {
+                        Text(
+                            text = notes,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (pinDetail != null) {
+                        Text(
+                            text = "❤️ ${pinDetail.likesCount}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

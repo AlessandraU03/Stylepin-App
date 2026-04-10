@@ -13,8 +13,19 @@ class UpdatePinsUseCase @Inject constructor(
         category: String,
         season: String,
         description: String? = null,
-        isPrivate: Boolean = false
+        isPrivate: Boolean = false,
+        styles: List<String> = emptyList(),
+        occasions: List<String> = emptyList(),
+        brands: List<String> = emptyList(),
+        priceRange: String = "bajo_500",
+        whereToBuy: String? = null,
+        purchaseLink: String? = null,
+        colors: List<String> = emptyList(),
+        tags: List<String> = emptyList()
     ): Result<Boolean> = runCatching {
-        repository.updatePin(pinId, title, imageUrl, category, season, description, isPrivate)
+        repository.updatePin(
+            pinId, title, imageUrl, category, season, description, isPrivate,
+            styles, occasions, brands, priceRange, whereToBuy, purchaseLink, colors, tags
+        )
     }
 }

@@ -25,7 +25,7 @@ data class BottomNavItem(
     val title: String,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector,
-    val routeName: String // Nombre de la ruta para comparar
+    val routeName: String
 )
 
 @Composable
@@ -33,14 +33,38 @@ fun StylePinBottomBar(
     currentRoute: String?,
     onNavigate: (String) -> Unit
 ) {
-    // Usamos el nombre de las clases serializables como referencia
     val items = listOf(
-        BottomNavItem("Inicio", Icons.Filled.Home, Icons.Outlined.Home, "com.ale.stylepin.core.navigation.PinsRoute"),
-        BottomNavItem("Explorar", Icons.Filled.Search, Icons.Outlined.Search, "com.ale.stylepin.core.navigation.BoardsRoute"),
-        // Espacio para el FAB central
-        BottomNavItem("", Icons.Default.Home, Icons.Default.Home, "dummy"),
-        BottomNavItem("Alertas", Icons.Filled.Notifications, Icons.Outlined.Notifications, "com.ale.stylepin.core.navigation.AlertsRoute"),
-        BottomNavItem("Perfil", Icons.Filled.Person, Icons.Outlined.Person, "com.ale.stylepin.core.navigation.ProfileRoute")
+        BottomNavItem(
+            title = "Inicio",
+            selectedIcon = Icons.Filled.Home,
+            unselectedIcon = Icons.Outlined.Home,
+            routeName = "com.ale.stylepin.core.navigation.PinsRoute"
+        ),
+        BottomNavItem(
+            title = "Explorar",
+            selectedIcon = Icons.Filled.Search,
+            unselectedIcon = Icons.Outlined.Search,
+            routeName = "com.ale.stylepin.core.navigation.SearchRoute"
+        ),
+        // Espacio vacío para el FAB central
+        BottomNavItem(
+            title = "",
+            selectedIcon = Icons.Default.Home,
+            unselectedIcon = Icons.Default.Home,
+            routeName = "dummy"
+        ),
+        BottomNavItem(
+            title = "Notificaciones",
+            selectedIcon = Icons.Filled.Notifications,
+            unselectedIcon = Icons.Outlined.Notifications,
+            routeName = "com.ale.stylepin.core.navigation.NotificationsRoute"  // ← CAMBIADO
+        ),
+        BottomNavItem(
+            title = "Perfil",
+            selectedIcon = Icons.Filled.Person,
+            unselectedIcon = Icons.Outlined.Person,
+            routeName = "com.ale.stylepin.core.navigation.ProfileRoute"
+        )
     )
 
     BottomAppBar(
@@ -55,11 +79,11 @@ fun StylePinBottomBar(
         ) {
             items.forEachIndexed { index, item ->
                 if (index == 2) {
-                    // Ítem invisible para dejar hueco al Botón Flotante
+                    // Hueco para el FAB
                     NavigationBarItem(
                         selected = false,
-                        onClick = { },
-                        icon = { },
+                        onClick = {},
+                        icon = {},
                         enabled = false,
                         colors = NavigationBarItemDefaults.colors(
                             disabledIconColor = Color.Transparent,
