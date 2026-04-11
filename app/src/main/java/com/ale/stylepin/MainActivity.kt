@@ -10,6 +10,7 @@ import androidx.fragment.app.FragmentActivity
 import com.ale.stylepin.core.navigation.NavigationWrapper
 import com.ale.stylepin.core.network.StylePinWebSocketManager
 import com.ale.stylepin.core.ui.theme.StylepinTheme
+import com.ale.stylepin.features.pins.domain.repository.PinSyncManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -18,6 +19,9 @@ class MainActivity : FragmentActivity() {
 
     @Inject
     lateinit var webSocketManager: StylePinWebSocketManager
+
+    @Inject
+    lateinit var pinSyncManager: PinSyncManager
 
     // ✅ Registrador de permisos (SIN intención de guardar token aquí)
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -39,6 +43,8 @@ class MainActivity : FragmentActivity() {
         requestNotificationPermission()
         
         handleNotificationIntent(intent)
+
+        pinSyncManager.schedulePeriodicSync()
         
         setContent {
             StylepinTheme {

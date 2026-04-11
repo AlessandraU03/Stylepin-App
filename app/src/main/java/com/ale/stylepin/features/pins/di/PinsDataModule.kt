@@ -1,6 +1,8 @@
 package com.ale.stylepin.features.pins.di
 
+import com.ale.stylepin.features.pins.data.managers.WorkManagerPinSync
 import com.ale.stylepin.features.pins.data.repositories.PinRepositoryImpl
+import com.ale.stylepin.features.pins.domain.repository.PinSyncManager
 import com.ale.stylepin.features.pins.domain.repository.PinsRepository
 import dagger.Binds
 import dagger.Module
@@ -14,4 +16,9 @@ abstract class PinsDataModule {
     abstract fun bindPinsRepository(
         pinRepositoryImpl: PinRepositoryImpl
     ): PinsRepository
+
+    @Binds
+    abstract fun bindPinSyncManager(
+        workManagerPinSync: WorkManagerPinSync
+    ): PinSyncManager
 }

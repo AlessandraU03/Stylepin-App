@@ -95,7 +95,10 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)   // Icons extendend
     // Hilt
     implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)                    // Integración con Jetpack Compose
+    implementation(libs.hilt.navigation.compose)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.common)
+    implementation(libs.androidx.hilt.work)                    // Integración con Jetpack Compose
     ksp(libs.hilt.compiler)
 
     implementation(libs.firebase.messaging)
