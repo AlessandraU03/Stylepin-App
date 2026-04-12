@@ -26,7 +26,7 @@ data class NotificationResponse(
 data class SaveFCMTokenRequest(
     @SerializedName("token")
     val token: String,
-    
+
     @SerializedName("device_name")
     val deviceName: String? = null
 )

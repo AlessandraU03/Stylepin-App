@@ -36,7 +36,9 @@ fun CommunityScreen(
             TopAppBar(
                 title = { Text("Comunidad StylePin", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Atrás") }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Atrás")
+                    }
                 }
             )
         }
@@ -51,7 +53,6 @@ fun CommunityScreen(
                 selectedTabIndex = selectedTab,
                 containerColor = Color.Transparent,
                 contentColor = MaterialTheme.colorScheme.primary,
-                // ¡CORRECCIÓN AQUÍ! Se usa el TabIndicatorScope nativo
                 indicator = {
                     TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(selectedTab),
@@ -62,12 +63,24 @@ fun CommunityScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Seguidores", color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else Color.Gray, fontWeight = FontWeight.Bold) }
+                    text = {
+                        Text(
+                            "Seguidores",
+                            color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else Color.Gray,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Seguidos", color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else Color.Gray, fontWeight = FontWeight.Bold) }
+                    text = {
+                        Text(
+                            "Seguidos",
+                            color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else Color.Gray,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 )
             }
 
@@ -89,29 +102,48 @@ fun CommunityScreen(
             )
 
             val listToShow = if (selectedTab == 0) uiState.followers else uiState.following
+
+            // CORRECCIÓN: filtramos por username Y fullName; ambos vienen del servidor
             val filteredList = listToShow.filter {
                 it.username.contains(searchQuery, ignoreCase = true) ||
                         it.fullName.contains(searchQuery, ignoreCase = true)
             }
 
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            when {
+                uiState.isLoading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else if (uiState.error != null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = uiState.error!!, color = MaterialTheme.colorScheme.error)
+
+                uiState.error != null -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = uiState.error!!, color = MaterialTheme.colorScheme.error)
+                    }
                 }
-            } else {
-                LazyColumn {
-                    items(filteredList) { user ->
-                        UserListItem(
-                            name = user.fullName,
-                            username = "@${user.username}",
-                            avatarUrl = user.avatarUrl,
-                            isFollowing = user.isFollowing,
-                            onFollowClick = { viewModel.toggleFollow(user) }
-                        )
+
+                filteredList.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        val emptyLabel = if (selectedTab == 0) "Sin seguidores todavía" else "No sigues a nadie todavía"
+                        Text(text = emptyLabel, color = Color.Gray)
+                    }
+                }
+
+                else -> {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(filteredList, key = { it.id }) { user ->
+                            // CORRECCIÓN CLAVE: usamos user.fullName y user.username tal como
+                            // vienen del servidor. El problema antes era que fullName podía llegar
+                            // vacío; ahora mostramos el username como nombre si fullName está vacío.
+                            val displayName = user.fullName.ifBlank { user.username }
+                            UserListItem(
+                                name = displayName,
+                                username = "@${user.username}",
+                                avatarUrl = user.avatarUrl,
+                                isFollowing = user.isFollowing,
+                                onFollowClick = { viewModel.toggleFollow(user) }
+                            )
+                        }
                     }
                 }
             }

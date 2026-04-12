@@ -4,27 +4,22 @@ import kotlinx.serialization.Serializable
 
 @Serializable object LoginRoute
 @Serializable object RegisterRoute
-
 @Serializable object PinsRoute
 @Serializable object SearchRoute
 @Serializable object AlertsRoute
 @Serializable object ProfileRoute
-
 @Serializable object EditProfileRoute
 @Serializable object AddPinRoute
-
-@Serializable object NotificationsRoute 
-@Serializable
-data class PinDetailRoute(
-    val id: String
-)
-
-@Serializable
-data class EditPinRoute(
-    val id: String
-)
-
+@Serializable object NotificationsRoute
 @Serializable object SettingsRoute
+@Serializable object BoardsRoute
+@Serializable object SyncSettingsRoute   // ← NUEVA
+
+@Serializable
+data class PinDetailRoute(val id: String)
+
+@Serializable
+data class EditPinRoute(val id: String)
 
 @Serializable
 data class CommunityRoute(
@@ -32,7 +27,11 @@ data class CommunityRoute(
     val userId: String
 )
 
-@Serializable object BoardsRoute
-@Serializable data class BoardDetailRoute(val id: String)
-@Serializable data class CreateBoardRoute(val userId: String)
-@Serializable data class EditBoardRoute(val id: String)
+@Serializable
+data class BoardDetailRoute(val id: String)
+
+@Serializable
+data class CreateBoardRoute(val userId: String)
+
+@Serializable
+data class EditBoardRoute(val id: String)

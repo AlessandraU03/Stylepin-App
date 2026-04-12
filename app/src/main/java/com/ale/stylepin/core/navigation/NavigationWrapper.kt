@@ -17,7 +17,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
-
 import com.ale.stylepin.core.presentation.components.StylePinBottomBar
 import com.ale.stylepin.features.auth.presentation.screens.LoginScreen
 import com.ale.stylepin.features.auth.presentation.screens.RegisterScreen
@@ -32,9 +31,12 @@ import com.ale.stylepin.features.explore.presentation.screens.ExploreScreen
 import com.ale.stylepin.features.explore.presentation.viewmodels.ExploreViewModel
 import com.ale.stylepin.features.profile.presentation.screens.ProfileScreen
 import com.ale.stylepin.features.profile.presentation.screens.SettingsScreen
+import com.ale.stylepin.features.profile.presentation.screens.SyncSettingsScreen   // ← NUEVO
 import com.ale.stylepin.features.profile.presentation.viewmodels.ProfileViewModel
 import com.ale.stylepin.features.profile.presentation.viewmodels.SettingsViewModel
 import com.ale.stylepin.features.community.presentation.screens.CommunityScreen
+import com.ale.stylepin.features.community.presentation.screens.AlertsScreen
+import com.ale.stylepin.features.community.presentation.viewmodels.AlertsViewModel
 import com.ale.stylepin.features.community.presentation.viewmodels.CommunityViewModel
 import com.ale.stylepin.features.profile.presentation.viewmodels.EditProfileViewModel
 import com.ale.stylepin.features.profile.presentation.screens.EditProfileScreen
@@ -46,7 +48,7 @@ import com.ale.stylepin.features.boards.presentation.screens.CreateBoardScreen
 import com.ale.stylepin.features.boards.presentation.screens.EditBoardScreen
 import com.ale.stylepin.features.boards.presentation.viewmodels.BoardsViewModel
 import com.ale.stylepin.features.notifications.presentation.screens.NotificationsScreen
-import com.ale.stylepin.features.notifications.presentation.viewmodels.NotificationsViewModel // ← NUEVO
+import com.ale.stylepin.features.notifications.presentation.viewmodels.NotificationsViewModel
 
 @Serializable
 data class OtherUserProfileRoute(val userId: String)
@@ -57,12 +59,13 @@ fun NavigationWrapper() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val showBottomBar = currentDestination?.hasRoute(PinsRoute::class) == true ||
-            currentDestination?.hasRoute(SearchRoute::class) == true ||
-            currentDestination?.hasRoute(AlertsRoute::class) == true ||
-            currentDestination?.hasRoute(ProfileRoute::class) == true ||
-            currentDestination?.hasRoute(BoardsRoute::class) == true ||
-            currentDestination?.hasRoute(NotificationsRoute::class) == true  // ← NUEVO
+    val showBottomBar =
+        currentDestination?.hasRoute(PinsRoute::class) == true ||
+                currentDestination?.hasRoute(SearchRoute::class) == true ||
+                currentDestination?.hasRoute(AlertsRoute::class) == true ||
+                currentDestination?.hasRoute(ProfileRoute::class) == true ||
+                currentDestination?.hasRoute(BoardsRoute::class) == true ||
+                currentDestination?.hasRoute(NotificationsRoute::class) == true
 
     Scaffold(
         bottomBar = {
@@ -71,10 +74,10 @@ fun NavigationWrapper() {
                     currentRoute = currentDestination?.route,
                     onNavigate = { title ->
                         when (title) {
-                            "Inicio"          -> navController.navigate(PinsRoute) { popUpTo(PinsRoute) { inclusive = true } }
-                            "Explorar"        -> navController.navigate(SearchRoute) { popUpTo(PinsRoute) }
-                            "Notificaciones"  -> navController.navigate(NotificationsRoute) { popUpTo(PinsRoute) }  // ← NUEVO
-                            "Perfil"          -> navController.navigate(ProfileRoute) { popUpTo(PinsRoute) }
+                            "Inicio"         -> navController.navigate(PinsRoute) { popUpTo(PinsRoute) { inclusive = true } }
+                            "Explorar"       -> navController.navigate(SearchRoute) { popUpTo(PinsRoute) }
+                            "Notificaciones" -> navController.navigate(NotificationsRoute) { popUpTo(PinsRoute) }
+                            "Perfil"         -> navController.navigate(ProfileRoute) { popUpTo(PinsRoute) }
                         }
                     }
                 )
@@ -94,14 +97,13 @@ fun NavigationWrapper() {
         },
         floatingActionButtonPosition = FabPosition.Center
     ) { innerPadding ->
-
         NavHost(
             navController = navController,
             startDestination = LoginRoute,
             modifier = Modifier.padding(innerPadding)
         ) {
 
-            // --- AUTH ---
+            // ── AUTH ─────────────────────────────────────────────────────────
             composable<LoginRoute> {
                 val viewModel: LoginViewModel = hiltViewModel()
                 LoginScreen(
@@ -128,7 +130,7 @@ fun NavigationWrapper() {
                 )
             }
 
-            // --- PINS ---
+            // ── PINS ──────────────────────────────────────────────────────────
             composable<PinsRoute> {
                 val viewModel: PinsViewModel = hiltViewModel()
                 PinsScreen(
@@ -160,6 +162,9 @@ fun NavigationWrapper() {
                     onBack = { navController.popBackStack() },
                     onNavigateToEditPin = { pin ->
                         navController.navigate(EditPinRoute(id = pin.id))
+                    },
+                    onNavigateToUserProfile = { userId ->
+                        navController.navigate(OtherUserProfileRoute(userId = userId))
                     }
                 )
             }
@@ -174,12 +179,11 @@ fun NavigationWrapper() {
                 )
             }
 
-            // --- BOARDS ---
+            // ── BOARDS ────────────────────────────────────────────────────────
             composable<BoardsRoute> {
                 val viewModel: BoardsViewModel = hiltViewModel()
                 val pinsViewModel: PinsViewModel = hiltViewModel()
                 val pinsState by pinsViewModel.uiState.collectAsStateWithLifecycle()
-
                 BoardsScreen(
                     userId = pinsState.currentUserId ?: "",
                     viewModel = viewModel,
@@ -226,7 +230,6 @@ fun NavigationWrapper() {
                 val viewModel: BoardsViewModel = hiltViewModel()
                 val pinsViewModel: PinsViewModel = hiltViewModel()
                 val pinsState by pinsViewModel.uiState.collectAsStateWithLifecycle()
-
                 EditBoardScreen(
                     boardId = route.id,
                     userId = pinsState.currentUserId ?: "",
@@ -235,7 +238,7 @@ fun NavigationWrapper() {
                 )
             }
 
-            // --- EXPLORE / SEARCH ---
+            // ── EXPLORAR ──────────────────────────────────────────────────────
             composable<SearchRoute> {
                 val exploreViewModel: ExploreViewModel = hiltViewModel()
                 ExploreScreen(
@@ -252,7 +255,7 @@ fun NavigationWrapper() {
                 )
             }
 
-            // --- PUBLIC PROFILE ---
+            // ── PERFIL PÚBLICO ────────────────────────────────────────────────
             composable<OtherUserProfileRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<OtherUserProfileRoute>()
                 val viewModel: PublicProfileViewModel = hiltViewModel()
@@ -269,13 +272,13 @@ fun NavigationWrapper() {
                 )
             }
 
-            // --- ALERTAS ---
+            // ── ALERTAS (WebSocket + servidor) ────────────────────────────────
             composable<AlertsRoute> {
-                val viewModel: com.ale.stylepin.features.community.presentation.viewmodels.AlertsViewModel = hiltViewModel()
-                com.ale.stylepin.features.community.presentation.screens.AlertsScreen(viewModel = viewModel)
+                val viewModel: AlertsViewModel = hiltViewModel()
+                AlertsScreen(viewModel = viewModel)
             }
 
-            // --- NOTIFICATIONS ---  ← NUEVO
+            // ── NOTIFICACIONES (histórico REST) ───────────────────────────────
             composable<NotificationsRoute> {
                 val viewModel: NotificationsViewModel = hiltViewModel()
                 NotificationsScreen(
@@ -284,7 +287,7 @@ fun NavigationWrapper() {
                 )
             }
 
-            // --- PROFILE Y COMMUNITY ---
+            // ── PERFIL PROPIO ─────────────────────────────────────────────────
             composable<ProfileRoute> {
                 val viewModel: ProfileViewModel = hiltViewModel()
                 ProfileScreen(
@@ -303,6 +306,10 @@ fun NavigationWrapper() {
                     },
                     onNavigateToBoardDetail = { boardId ->
                         navController.navigate(BoardDetailRoute(id = boardId))
+                    },
+                    onNavigateToCreateBoard = {   // ← NUEVO: FAB de la pestaña Tableros
+                        val userId = viewModel.uiState.value.profile?.id ?: ""
+                        navController.navigate(CreateBoardRoute(userId = userId))
                     }
                 )
             }
@@ -315,6 +322,7 @@ fun NavigationWrapper() {
                 )
             }
 
+            // ← SETTINGS con nueva ruta de sync
             composable<SettingsRoute> {
                 val viewModel: SettingsViewModel = hiltViewModel()
                 SettingsScreen(
@@ -325,18 +333,24 @@ fun NavigationWrapper() {
                         navController.navigate(LoginRoute) {
                             popUpTo(0) { inclusive = true }
                         }
+                    },
+                    onNavigateToSync = {   // ← NUEVO
+                        navController.navigate(SyncSettingsRoute)
                     }
                 )
+            }
+
+            // ← NUEVA ruta de sincronización
+            composable<SyncSettingsRoute> {
+                SyncSettingsScreen(onBack = { navController.popBackStack() })
             }
 
             composable<CommunityRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<CommunityRoute>()
                 val viewModel: CommunityViewModel = hiltViewModel()
-
                 LaunchedEffect(route.userId) {
                     viewModel.loadData(route.userId)
                 }
-
                 CommunityScreen(
                     initialTab = route.initialTab,
                     viewModel = viewModel,

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,7 +23,8 @@ import com.ale.stylepin.features.profile.presentation.viewmodels.SettingsViewMod
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToSync: () -> Unit   // ← NUEVO parámetro
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -77,16 +79,26 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Configuración", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás") }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                    }
                 }
             )
         }
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Cuenta", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            Text(
+                "Cuenta",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
             HorizontalDivider()
 
             ListItem(
@@ -97,8 +109,33 @@ fun SettingsScreen(
 
             ListItem(
                 headlineContent = { Text("Eliminar cuenta", color = MaterialTheme.colorScheme.error) },
-                leadingContent = { Icon(Icons.Default.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                leadingContent = {
+                    Icon(
+                        Icons.Default.DeleteForever,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
                 modifier = Modifier.fillMaxWidth().clickable { showDeleteDialog = true }
+            )
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Datos",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            HorizontalDivider()
+
+            // ← NUEVO: opción de sincronización
+            ListItem(
+                headlineContent = { Text("Sincronización de pines") },
+                supportingContent = { Text("Sincronizar pines sin conexión") },
+                leadingContent = {
+                    Icon(Icons.Default.Sync, contentDescription = null)
+                },
+                modifier = Modifier.fillMaxWidth().clickable { onNavigateToSync() }
             )
         }
     }

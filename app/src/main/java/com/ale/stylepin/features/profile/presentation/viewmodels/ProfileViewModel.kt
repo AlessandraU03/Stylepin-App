@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.features.boards.domain.entities.Board
 import com.ale.stylepin.features.boards.domain.usecases.GetBoardPinsUseCase
 import com.ale.stylepin.features.boards.domain.usecases.GetUserBoardsUseCase
+import com.ale.stylepin.features.boards.domain.usecases.RemovePinFromBoardUseCase
 import com.ale.stylepin.features.pins.domain.entities.Pin
 import com.ale.stylepin.features.pins.domain.usecases.GetPinByIdUseCase
 import com.ale.stylepin.features.pins.domain.usecases.GetPinsUseCase
@@ -31,7 +32,7 @@ data class ProfileUiState(
     val error: String? = null,
     val userPins: List<Pin> = emptyList(),
     val userBoards: List<Board> = emptyList(),
-    val savedPins: List<Pin> = emptyList() // Aquí irán todos tus guardados
+    val savedPins: List<Pin> = emptyList()
 )
 
 @HiltViewModel
@@ -39,8 +40,9 @@ class ProfileViewModel @Inject constructor(
     private val getMyProfileUseCase: GetMyProfileUseCase,
     private val getPinsUseCase: GetPinsUseCase,
     private val getUserBoardsUseCase: GetUserBoardsUseCase,
-    private val getBoardPinsUseCase: GetBoardPinsUseCase, // NUEVO: Para sacar pines de tableros
-    private val getPinByIdUseCase: GetPinByIdUseCase,     // NUEVO: Para obtener el detalle del pin
+    private val getBoardPinsUseCase: GetBoardPinsUseCase,
+    private val getPinByIdUseCase: GetPinByIdUseCase,
+    private val removePinFromBoardUseCase: RemovePinFromBoardUseCase, // Para quitar guardados
     private val uploadAvatarUseCase: UploadAvatarUseCase,
     private val updateProfileUseCase: UpdateProfileUseCase
 ) : ViewModel() {
@@ -48,8 +50,10 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState = _uiState.asStateFlow()
 
+    // Mapa interno: pinId → lista de boardIds donde está guardado (para poder eliminarlo de todos)
+    private val _pinBoardMap = mutableMapOf<String, MutableList<String>>()
+
     init {
-        // Escucha los pines creados por el usuario desde la BD local
         getPinsUseCase.executeFlow().onEach { allPins ->
             val profileId = _uiState.value.profile?.id
             if (profileId != null) {
@@ -66,34 +70,40 @@ class ProfileViewModel @Inject constructor(
                 val profile = getMyProfileUseCase.execute()
                 _uiState.update { it.copy(profile = profile) }
 
-                // 1. Obtener los Tableros del usuario
+                // 1. Tableros del usuario (propios + colaborados)
                 val boards = getUserBoardsUseCase(profile.id).getOrNull() ?: emptyList()
                 _uiState.update { it.copy(userBoards = boards) }
 
-                // 2. LÓGICA INFALIBLE DE GUARDADOS:
-                // Buscar todos los pines dentro de todos los tableros del usuario
+                // 2. GUARDADOS: recorrer TODOS los tableros y juntar todos los pins únicos
+                _pinBoardMap.clear()
                 val boardPinsDeferred = boards.map { board ->
-                    async { getBoardPinsUseCase(board.id).getOrNull() ?: emptyList() }
+                    async {
+                        val bps = getBoardPinsUseCase(board.id).getOrNull() ?: emptyList()
+                        bps.forEach { bp ->
+                            _pinBoardMap.getOrPut(bp.pinId) { mutableListOf() }.add(board.id)
+                        }
+                        bps
+                    }
                 }
-                // Juntar todos los pines de todos los tableros, quitar duplicados
-                val uniquePinIds = boardPinsDeferred.awaitAll().flatten().map { it.pinId }.distinct()
+                val uniquePinIds = boardPinsDeferred.awaitAll()
+                    .flatten()
+                    .map { it.pinId }
+                    .distinct()
 
-                // Obtener la información visual de cada Pin
                 val pinsDeferred = uniquePinIds.map { pinId ->
                     async { getPinByIdUseCase(pinId).getOrNull() }
                 }
                 val savedPinsList = pinsDeferred.awaitAll().filterNotNull()
 
-                // 3. Obtener los pines Creados
+                // 3. Pines creados por el usuario
                 val currentPins = getPinsUseCase().getOrNull() ?: emptyList()
                 val created = currentPins.filter { it.userId == profile.id }
 
-                // 4. Actualizar la vista
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         userPins = created,
-                        savedPins = savedPinsList // Se llena la pestaña de guardados
+                        savedPins = savedPinsList
                     )
                 }
             } catch (e: Exception) {
@@ -102,12 +112,30 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Quita un pin de TODOS los tableros donde está guardado.
+     * Se llama desde el tab Guardados cuando el usuario presiona el botón eliminar.
+     */
+    fun removeSavedPin(pinId: String) {
+        viewModelScope.launch {
+            val boardIds = _pinBoardMap[pinId] ?: return@launch
+            boardIds.forEach { boardId ->
+                removePinFromBoardUseCase(boardId, pinId)
+            }
+            // Actualizar UI optimistamente
+            _uiState.update { state ->
+                state.copy(savedPins = state.savedPins.filter { it.id != pinId })
+            }
+            _pinBoardMap.remove(pinId)
+        }
+    }
+
     fun updateAvatar(uri: Uri) {
         viewModelScope.launch {
             _uiState.update { it.copy(isUploadingAvatar = true, error = null) }
             uploadAvatarUseCase.execute(uri.toString()).onSuccess { newUrl ->
                 val profile = _uiState.value.profile
-                if(profile != null) {
+                if (profile != null) {
                     updateProfileUseCase.execute(profile.fullName, profile.bio, profile.gender, newUrl)
                     refresh()
                 }
