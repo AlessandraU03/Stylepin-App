@@ -17,6 +17,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
+
 import com.ale.stylepin.core.presentation.components.StylePinBottomBar
 import com.ale.stylepin.features.auth.presentation.screens.LoginScreen
 import com.ale.stylepin.features.auth.presentation.screens.RegisterScreen
@@ -31,7 +32,7 @@ import com.ale.stylepin.features.explore.presentation.screens.ExploreScreen
 import com.ale.stylepin.features.explore.presentation.viewmodels.ExploreViewModel
 import com.ale.stylepin.features.profile.presentation.screens.ProfileScreen
 import com.ale.stylepin.features.profile.presentation.screens.SettingsScreen
-import com.ale.stylepin.features.profile.presentation.screens.SyncSettingsScreen   // ← NUEVO
+import com.ale.stylepin.features.profile.presentation.screens.SyncSettingsScreen
 import com.ale.stylepin.features.profile.presentation.viewmodels.ProfileViewModel
 import com.ale.stylepin.features.profile.presentation.viewmodels.SettingsViewModel
 import com.ale.stylepin.features.community.presentation.screens.CommunityScreen
@@ -272,7 +273,7 @@ fun NavigationWrapper() {
                 )
             }
 
-            // ── ALERTAS (WebSocket + servidor) ────────────────────────────────
+            // ── ALERTAS (WebSocket tiempo real) ───────────────────────────────
             composable<AlertsRoute> {
                 val viewModel: AlertsViewModel = hiltViewModel()
                 AlertsScreen(viewModel = viewModel)
@@ -307,7 +308,8 @@ fun NavigationWrapper() {
                     onNavigateToBoardDetail = { boardId ->
                         navController.navigate(BoardDetailRoute(id = boardId))
                     },
-                    onNavigateToCreateBoard = {   // ← NUEVO: FAB de la pestaña Tableros
+                    onNavigateToCreateBoard = {
+                        // Obtiene el userId del perfil cargado en el ViewModel
                         val userId = viewModel.uiState.value.profile?.id ?: ""
                         navController.navigate(CreateBoardRoute(userId = userId))
                     }
@@ -322,7 +324,7 @@ fun NavigationWrapper() {
                 )
             }
 
-            // ← SETTINGS con nueva ruta de sync
+            // ── AJUSTES ───────────────────────────────────────────────────────
             composable<SettingsRoute> {
                 val viewModel: SettingsViewModel = hiltViewModel()
                 SettingsScreen(
@@ -334,17 +336,18 @@ fun NavigationWrapper() {
                             popUpTo(0) { inclusive = true }
                         }
                     },
-                    onNavigateToSync = {   // ← NUEVO
+                    onNavigateToSync = {
                         navController.navigate(SyncSettingsRoute)
                     }
                 )
             }
 
-            // ← NUEVA ruta de sincronización
+            // ── SINCRONIZACIÓN ────────────────────────────────────────────────
             composable<SyncSettingsRoute> {
                 SyncSettingsScreen(onBack = { navController.popBackStack() })
             }
 
+            // ── COMUNIDAD (seguidores / seguidos) ─────────────────────────────
             composable<CommunityRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<CommunityRoute>()
                 val viewModel: CommunityViewModel = hiltViewModel()
