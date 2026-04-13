@@ -170,7 +170,6 @@ class PinsViewModel @Inject constructor(
             val currentPin = _uiState.value.pinDetail ?: return@launch
             val newLikeState = !currentPin.isLikedByMe
 
-            // GUARDAMOS EN MEMORIA CACHÉ
             if (newLikeState) localLikedPins.add(pinId) else localLikedPins.remove(pinId)
 
             val updatedPin = currentPin.copy(
@@ -182,7 +181,6 @@ class PinsViewModel @Inject constructor(
             pinsRepository.savePinLocal(updatedPin)
 
             toggleLikeUseCase(pinId).onFailure {
-                // Revertimos solo si el servidor falla
                 if (!newLikeState) localLikedPins.add(pinId) else localLikedPins.remove(pinId)
                 _uiState.update { state -> state.copy(pinDetail = currentPin) }
             }

@@ -17,7 +17,7 @@ data class BoardDto(
     @SerializedName("description")      val description: String? = null,
     @SerializedName("cover_image_url")  val cover_image_url: String? = null,
     @SerializedName("is_private")       val is_private: Boolean = false,
-    @SerializedName("is_collaborative") val is_collaborative: Boolean = false,
+    @SerializedName("is_collaborative") val is_collaborative: Boolean = true,
     @SerializedName("pins_count")       val pins_count: Int = 0,
     @SerializedName("created_at")       val created_at: String = "",
     @SerializedName("updated_at")       val updated_at: String? = null,
@@ -75,14 +75,14 @@ data class CreateBoardRequest(
     @SerializedName("name")             val name: String,
     @SerializedName("description")      val description: String? = null,
     @SerializedName("is_private")       val is_private: Boolean = false,
-    @SerializedName("is_collaborative") val is_collaborative: Boolean = false
+    @SerializedName("is_collaborative") val is_collaborative: Boolean = true
 )
 
 data class UpdateBoardRequest(
     @SerializedName("name")             val name: String,
     @SerializedName("description")      val description: String? = null,
     @SerializedName("is_private")       val is_private: Boolean = false,
-    @SerializedName("is_collaborative") val is_collaborative: Boolean = false,
+    @SerializedName("is_collaborative") val is_collaborative: Boolean = true,
     @SerializedName("cover_image_url")  val cover_image_url: String? = null
 )
 

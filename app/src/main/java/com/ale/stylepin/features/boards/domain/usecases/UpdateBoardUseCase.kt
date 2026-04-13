@@ -12,7 +12,7 @@ class UpdateBoardUseCase @Inject constructor(
         name: String,
         description: String? = null,
         isPrivate: Boolean = false,
-        isCollaborative: Boolean = false,
+        isCollaborative: Boolean = true,
         coverImageUrl: String? = null
     ): Result<Board> = runCatching {
         repository.updateBoard(boardId, name, description, isPrivate, isCollaborative, coverImageUrl)

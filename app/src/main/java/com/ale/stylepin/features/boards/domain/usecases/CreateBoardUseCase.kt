@@ -11,7 +11,7 @@ class CreateBoardUseCase @Inject constructor(
         name: String,
         description: String? = null,
         isPrivate: Boolean = false,
-        isCollaborative: Boolean = false
+        isCollaborative: Boolean = true
     ): Result<Board> = runCatching {
         repository.createBoard(name, description, isPrivate, isCollaborative)
     }

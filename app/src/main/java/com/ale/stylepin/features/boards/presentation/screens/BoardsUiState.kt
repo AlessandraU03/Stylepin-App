@@ -23,7 +23,7 @@ data class BoardsUiState(
     val name: String = "",
     val description: String = "",
     val isPrivate: Boolean = false,
-    val isCollaborative: Boolean = false,
+    val isCollaborative: Boolean = true,
 
     // ── Agregar pin al tablero ─────────────────────────────
     val addPinNotes: String = "",
