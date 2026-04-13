@@ -26,6 +26,7 @@ import coil.compose.AsyncImage
 import com.ale.stylepin.features.boards.domain.entities.BoardCollaborator
 import com.ale.stylepin.features.boards.presentation.viewmodels.BoardFormEvent
 import com.ale.stylepin.features.boards.presentation.viewmodels.BoardsViewModel
+import com.ale.stylepin.features.explore.data.datasources.remote.model.UserSearchDto
 import com.ale.stylepin.features.pins.domain.entities.Pin
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,7 +50,11 @@ fun BoardDetailScreen(
         topBar = {
             TopAppBar(
                 title = { Text(uiState.boardDetail?.name ?: "Tablero") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Volver") } },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, "Volver")
+                    }
+                },
                 actions = {
                     if (uiState.boardDetail?.isOwner == true) {
                         IconButton(onClick = { onEditBoard(boardId) }) {
@@ -71,6 +76,7 @@ fun BoardDetailScreen(
                     }
                 } else if (selectedTab == 1 && board.isOwner) {
                     FloatingActionButton(onClick = {
+                        viewModel.clearCollaboratorSearch()
                         showAddCollaboratorDialog = true
                     }) {
                         Icon(Icons.Default.PersonAdd, "Añadir Colaborador")
@@ -85,7 +91,6 @@ fun BoardDetailScreen(
                 uiState.boardDetail != null -> {
                     val board = uiState.boardDetail!!
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // Header
                         Column(modifier = Modifier.padding(16.dp)) {
                             if (!board.description.isNullOrBlank()) {
                                 Text(board.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -127,7 +132,7 @@ fun BoardDetailScreen(
                                                 isOwner = board.isOwner,
                                                 onPinClick = { onPinClick(boardPin.pinId) },
                                                 onDelete = { viewModel.removePinFromBoard(boardId, boardPin.pinId) },
-                                                onLikeClick = { /* Implementado vía PinsViewModel o BoardsViewModel si se requiere */ }
+                                                onLikeClick = {}
                                             )
                                         }
                                     }
@@ -137,17 +142,23 @@ fun BoardDetailScreen(
                                 if (uiState.collaborators.isEmpty()) {
                                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin colaboradores") }
                                 } else {
-                                    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
+                                    LazyColumn(
+                                        contentPadding = PaddingValues(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
                                         items(uiState.collaborators, key = { it.id }) { collaborator ->
                                             Card(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 onClick = {
-                                                    if (board.isOwner) {
-                                                        selectedCollaboratorForEdit = collaborator
-                                                    }
+                                                    if (board.isOwner) selectedCollaboratorForEdit = collaborator
                                                 }
                                             ) {
-                                                Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
                                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                         AsyncImage(model = collaborator.userAvatarUrl, contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape))
                                                         Column {
@@ -183,45 +194,258 @@ fun BoardDetailScreen(
             notes = uiState.addPinNotes,
             onNotesChange = { viewModel.onFormEvent(BoardFormEvent.AddPinNotesChanged(it)) },
             onPinSelected = { pinId ->
-                viewModel.addPinToBoard(boardId, pinId) {
-                    showAddPinDialog = false
-                }
+                viewModel.addPinToBoard(boardId, pinId) { showAddPinDialog = false }
             },
             onDismiss = { showAddPinDialog = false }
         )
     }
 
     if (showAddCollaboratorDialog) {
-        CollaboratorActionDialog(
-            title = "Añadir Colaborador",
-            confirmText = "Añadir",
-            onDismiss = { showAddCollaboratorDialog = false },
+        AddCollaboratorDialog(
+            searchQuery = uiState.collaboratorSearchQuery,
+            searchResults = uiState.collaboratorSearchResults,
+            isSearching = uiState.isSearchingCollaborator,
+            selectedUser = uiState.selectedCollaboratorUser,
+            onQueryChange = { viewModel.searchCollaboratorByUsername(it) },
+            onUserSelected = { viewModel.selectCollaboratorUser(it) },
+            onDismiss = {
+                viewModel.clearCollaboratorSearch()
+                showAddCollaboratorDialog = false
+            },
             onConfirm = { userId, canEdit, canAddPins, canRemovePins ->
                 viewModel.addCollaborator(boardId, userId, canEdit, canAddPins, canRemovePins) {
                     showAddCollaboratorDialog = false
                 }
-            },
-            isEdit = false
+            }
         )
     }
 
     if (selectedCollaboratorForEdit != null) {
-        CollaboratorActionDialog(
-            title = "Permisos de @${selectedCollaboratorForEdit!!.userUsername}",
-            confirmText = "Guardar",
+        CollaboratorPermissionsDialog(
+            collaborator = selectedCollaboratorForEdit!!,
             onDismiss = { selectedCollaboratorForEdit = null },
-            onConfirm = { _, canEdit, canAddPins, canRemovePins ->
-                viewModel.updateCollaboratorPermissions(boardId, selectedCollaboratorForEdit!!.userId, canEdit, canAddPins, canRemovePins) {
-                    selectedCollaboratorForEdit = null
-                }
-            },
-            isEdit = true,
-            initialCanEdit = selectedCollaboratorForEdit!!.canEdit,
-            initialCanAddPins = selectedCollaboratorForEdit!!.canAddPins,
-            initialCanRemovePins = selectedCollaboratorForEdit!!.canRemovePins
+            onConfirm = { canEdit, canAddPins, canRemovePins ->
+                viewModel.updateCollaboratorPermissions(
+                    boardId, selectedCollaboratorForEdit!!.userId,
+                    canEdit, canAddPins, canRemovePins
+                ) { selectedCollaboratorForEdit = null }
+            }
         )
     }
 }
+
+// ── Dialog: Agregar colaborador por username ──────────────────
+
+@Composable
+fun AddCollaboratorDialog(
+    searchQuery: String,
+    searchResults: List<UserSearchDto>,
+    isSearching: Boolean,
+    selectedUser: UserSearchDto?,
+    onQueryChange: (String) -> Unit,
+    onUserSelected: (UserSearchDto) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: (userId: String, canEdit: Boolean, canAddPins: Boolean, canRemovePins: Boolean) -> Unit
+) {
+    var canEdit by remember { mutableStateOf(false) }
+    var canAddPins by remember { mutableStateOf(true) }
+    var canRemovePins by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir Colaborador") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                // Campo de búsqueda
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onQueryChange,
+                    label = { Text("Buscar por nombre de usuario") },
+                    placeholder = { Text("Ej: maria_garcia") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    trailingIcon = {
+                        if (isSearching) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { onQueryChange("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Limpiar")
+                            }
+                        }
+                    }
+                )
+
+                // Resultados de búsqueda
+                if (searchResults.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Column {
+                            searchResults.forEach { user ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onUserSelected(user) }
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    AsyncImage(
+                                        model = user.avatarUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.outline)
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = user.fullName ?: user.username,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "@${user.username}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (user.isVerified == true) {
+                                        Icon(
+                                            Icons.Default.Verified,
+                                            contentDescription = "Verificado",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                                if (searchResults.last() != user) {
+                                    HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Usuario seleccionado
+                if (selectedUser != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = selectedUser.fullName ?: selectedUser.username,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Text(
+                                    text = "@${selectedUser.username}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
+
+                    // Permisos (solo si hay usuario seleccionado)
+                    Text("Permisos:", style = MaterialTheme.typography.labelLarge)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = canEdit, onCheckedChange = { canEdit = it })
+                        Text("Puede editar el tablero")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = canAddPins, onCheckedChange = { canAddPins = it })
+                        Text("Puede añadir pins")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = canRemovePins, onCheckedChange = { canRemovePins = it })
+                        Text("Puede quitar pins")
+                    }
+                }
+
+                // Sin resultados
+                if (searchQuery.length >= 2 && !isSearching && searchResults.isEmpty() && selectedUser == null) {
+                    Text(
+                        "No se encontraron usuarios con ese nombre.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    selectedUser?.let { onConfirm(it.id, canEdit, canAddPins, canRemovePins) }
+                },
+                enabled = selectedUser != null
+            ) {
+                Text("Añadir")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+// ── Dialog: Editar permisos de colaborador existente ──────────
+
+@Composable
+fun CollaboratorPermissionsDialog(
+    collaborator: BoardCollaborator,
+    onDismiss: () -> Unit,
+    onConfirm: (canEdit: Boolean, canAddPins: Boolean, canRemovePins: Boolean) -> Unit
+) {
+    var canEdit by remember { mutableStateOf(collaborator.canEdit) }
+    var canAddPins by remember { mutableStateOf(collaborator.canAddPins) }
+    var canRemovePins by remember { mutableStateOf(collaborator.canRemovePins) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Permisos de @${collaborator.userUsername}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = canEdit, onCheckedChange = { canEdit = it })
+                    Text("Puede editar el tablero")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = canAddPins, onCheckedChange = { canAddPins = it })
+                    Text("Puede añadir pins")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = canRemovePins, onCheckedChange = { canRemovePins = it })
+                    Text("Puede quitar pins")
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(canEdit, canAddPins, canRemovePins) }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+// ── BoardPinCard ──────────────────────────────────────────────
 
 @Composable
 fun BoardPinCard(
@@ -248,38 +472,27 @@ fun BoardPinCard(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
-                    
-                    // Botón de Like pequeño en la card del tablero
                     Icon(
                         imageVector = if (pinDetail.isLikedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = null,
                         tint = if (pinDetail.isLikedByMe) Color.Red else Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(6.dp)
-                            .size(18.dp)
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).size(18.dp)
                     )
-
                 } else {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     }
                 }
-                
                 if (isOwner) {
                     IconButton(
                         onClick = onDelete,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(4.dp)
-                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                            .size(32.dp)
+                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape).size(32.dp)
                     ) {
                         Icon(Icons.Default.Delete, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
             }
-            
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(
                     text = pinDetail?.title ?: "Cargando...",
@@ -288,33 +501,20 @@ fun BoardPinCard(
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Bold
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     if (!notes.isNullOrBlank()) {
-                        Text(
-                            text = notes,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Text(text = notes, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     }
                     if (pinDetail != null) {
-                        Text(
-                            text = "❤️ ${pinDetail.likesCount}",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text(text = "❤️ ${pinDetail.likesCount}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
     }
 }
+
+// ── AddPinToBoardDialog ───────────────────────────────────────
 
 @Composable
 fun AddPinToBoardDialog(
@@ -326,128 +526,34 @@ fun AddPinToBoardDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f),
-            shape = RoundedCornerShape(16.dp)
-        ) {
+        Card(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Agregar Pin al Tablero", style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = notes,
-                    onValueChange = onNotesChange,
-                    label = { Text("Notas (opcional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+                OutlinedTextField(value = notes, onValueChange = onNotesChange, label = { Text("Notas (opcional)") }, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(16.dp))
                 Text("Selecciona uno de tus pins:", style = MaterialTheme.typography.labelLarge)
                 Spacer(Modifier.height(8.dp))
-
                 if (isLoading) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else if (pins.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No tienes pins propios aún.")
-                    }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No tienes pins propios aún.") }
                 } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(4.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(4.dp), modifier = Modifier.weight(1f)) {
                         items(pins, key = { it.id }) { pin ->
-                            Card(
-                                modifier = Modifier.padding(4.dp).clickable { onPinSelected(pin.id) },
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                            ) {
+                            Card(modifier = Modifier.padding(4.dp).clickable { onPinSelected(pin.id) }, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                                 Column {
-                                    AsyncImage(
-                                        model = pin.imageUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxWidth().height(100.dp),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                    Text(
-                                        text = pin.title,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        modifier = Modifier.padding(4.dp),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    AsyncImage(model = pin.imageUrl, contentDescription = null, modifier = Modifier.fillMaxWidth().height(100.dp), contentScale = ContentScale.Crop)
+                                    Text(text = pin.title, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(4.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                         }
                     }
                 }
-
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
                 }
             }
         }
     }
-}
-
-@Composable
-fun CollaboratorActionDialog(
-    title: String,
-    confirmText: String,
-    onDismiss: () -> Unit,
-    onConfirm: (userId: String, canEdit: Boolean, canAddPins: Boolean, canRemovePins: Boolean) -> Unit,
-    isEdit: Boolean,
-    initialCanEdit: Boolean = false,
-    initialCanAddPins: Boolean = true,
-    initialCanRemovePins: Boolean = false
-) {
-    var userId by remember { mutableStateOf("") }
-    var canEdit by remember { mutableStateOf(initialCanEdit) }
-    var canAddPins by remember { mutableStateOf(initialCanAddPins) }
-    var canRemovePins by remember { mutableStateOf(initialCanRemovePins) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!isEdit) {
-                    OutlinedTextField(
-                        value = userId,
-                        onValueChange = { userId = it },
-                        label = { Text("ID del Usuario") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                
-                Text("Permisos:", style = MaterialTheme.typography.labelLarge)
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = canEdit, onCheckedChange = { canEdit = it })
-                    Text("Puede editar el tablero")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = canAddPins, onCheckedChange = { canAddPins = it })
-                    Text("Puede añadir pins")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = canRemovePins, onCheckedChange = { canRemovePins = it })
-                    Text("Puede quitar pins")
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(userId, canEdit, canAddPins, canRemovePins) },
-                enabled = isEdit || userId.isNotBlank()
-            ) {
-                Text(confirmText)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
-        }
-    )
 }

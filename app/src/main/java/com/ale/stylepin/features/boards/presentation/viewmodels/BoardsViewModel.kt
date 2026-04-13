@@ -5,9 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.features.boards.domain.entities.Board
 import com.ale.stylepin.features.boards.domain.usecases.*
 import com.ale.stylepin.features.boards.presentation.screens.BoardsUiState
+import com.ale.stylepin.features.explore.data.datasources.remote.api.ExploreApi
+import com.ale.stylepin.features.explore.data.datasources.remote.model.UserSearchDto
 import com.ale.stylepin.features.pins.domain.usecases.GetPinByIdUseCase
 import com.ale.stylepin.features.pins.domain.usecases.GetPinsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,11 +35,14 @@ class BoardsViewModel @Inject constructor(
     private val removeCollaboratorUseCase: RemoveCollaboratorUseCase,
     private val updateCollaboratorPermissionsUseCase: UpdateCollaboratorPermissionsUseCase,
     private val getPinsUseCase: GetPinsUseCase,
-    private val getPinByIdUseCase: GetPinByIdUseCase
+    private val getPinByIdUseCase: GetPinByIdUseCase,
+    private val exploreApi: ExploreApi  // ← para buscar usuarios por username
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BoardsUiState())
     val uiState: StateFlow<BoardsUiState> = _uiState.asStateFlow()
+
+    private var searchJob: Job? = null
 
     // ── Lista ─────────────────────────────────────────────────
 
@@ -133,36 +140,26 @@ class BoardsViewModel @Inject constructor(
     fun createBoard(userId: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             val s = _uiState.value
-
-            // Validación mínima antes de llamar a la API
             if (s.name.isBlank()) {
                 _uiState.update { it.copy(error = "El nombre del tablero no puede estar vacío") }
                 return@launch
             }
-
             _uiState.update { it.copy(isLoading = true, error = null) }
-
             createBoardUseCase(
-                name           = s.name.trim(),
-                description    = s.description.takeIf { it.isNotBlank() },
-                isPrivate      = s.isPrivate,
+                name            = s.name.trim(),
+                description     = s.description.takeIf { it.isNotBlank() },
+                isPrivate       = s.isPrivate,
                 isCollaborative = s.isCollaborative
             ).fold(
-                onSuccess = {
-                    resetForm()
-                    loadAllBoards()
-                    onSuccess()
-                },
+                onSuccess = { resetForm(); loadAllBoards(); onSuccess() },
                 onFailure = { e ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            // Mensaje de error legible para el usuario
                             error = when {
-                                e.message?.contains("401") == true -> "Sesión expirada. Vuelve a iniciar sesión."
-                                e.message?.contains("403") == true -> "No tienes permiso para crear tableros."
-                                e.message?.contains("422") == true -> "Datos inválidos. Revisa el nombre del tablero."
-                                e.message?.contains("vacía") == true -> "El servidor no devolvió el tablero creado."
+                                e.message?.contains("401") == true -> "Sesión expirada."
+                                e.message?.contains("403") == true -> "No tienes permiso."
+                                e.message?.contains("422") == true -> "Datos inválidos."
                                 else -> "Error al crear el tablero: ${e.message}"
                             }
                         )
@@ -195,9 +192,7 @@ class BoardsViewModel @Inject constructor(
         viewModelScope.launch {
             deleteBoardUseCase(boardId).fold(
                 onSuccess = { loadAllBoards() },
-                onFailure = { e ->
-                    _uiState.update { it.copy(error = e.message) }
-                }
+                onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
             )
         }
     }
@@ -227,9 +222,7 @@ class BoardsViewModel @Inject constructor(
                     loadBoardPins(boardId)
                     onSuccess()
                 },
-                onFailure = { e ->
-                    _uiState.update { it.copy(error = e.message) }
-                }
+                onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
             )
         }
     }
@@ -238,14 +231,67 @@ class BoardsViewModel @Inject constructor(
         viewModelScope.launch {
             removePinFromBoardUseCase(boardId, pinId).fold(
                 onSuccess = { loadBoardPins(boardId) },
-                onFailure = { e ->
-                    _uiState.update { it.copy(error = e.message) }
-                }
+                onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
             )
         }
     }
 
     // ── Colaboradores ─────────────────────────────────────────
+
+    // Búsqueda con debounce de 400ms para no spamear la API
+    fun searchCollaboratorByUsername(query: String) {
+        _uiState.update {
+            it.copy(
+                collaboratorSearchQuery = query,
+                collaboratorSearchResults = if (query.isBlank()) emptyList() else it.collaboratorSearchResults,
+                selectedCollaboratorUser = if (query.isBlank()) null else it.selectedCollaboratorUser
+            )
+        }
+        if (query.isBlank()) return
+
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            delay(400L)
+            _uiState.update { it.copy(isSearchingCollaborator = true) }
+            try {
+                val response = exploreApi.searchUsers(query, limit = 5)
+                if (response.isSuccessful) {
+                    val users = response.body()?.users ?: emptyList()
+                    _uiState.update {
+                        it.copy(
+                            isSearchingCollaborator = false,
+                            collaboratorSearchResults = users
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(isSearchingCollaborator = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSearchingCollaborator = false) }
+            }
+        }
+    }
+
+    fun selectCollaboratorUser(user: UserSearchDto) {
+        _uiState.update {
+            it.copy(
+                selectedCollaboratorUser = user,
+                collaboratorSearchQuery = user.username,
+                collaboratorSearchResults = emptyList()
+            )
+        }
+    }
+
+    fun clearCollaboratorSearch() {
+        _uiState.update {
+            it.copy(
+                collaboratorSearchQuery = "",
+                collaboratorSearchResults = emptyList(),
+                selectedCollaboratorUser = null,
+                isSearchingCollaborator = false
+            )
+        }
+    }
 
     fun addCollaborator(
         boardId: String, userId: String,
@@ -254,7 +300,11 @@ class BoardsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             addCollaboratorUseCase(boardId, userId, canEdit, canAddPins, canRemovePins).fold(
-                onSuccess = { loadCollaborators(boardId); onSuccess() },
+                onSuccess = {
+                    clearCollaboratorSearch()
+                    loadCollaborators(boardId)
+                    onSuccess()
+                },
                 onFailure = { e -> _uiState.update { it.copy(error = e.message) } }
             )
         }
