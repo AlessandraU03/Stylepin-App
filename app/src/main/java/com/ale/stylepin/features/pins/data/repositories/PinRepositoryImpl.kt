@@ -36,12 +36,17 @@ class PinRepositoryImpl @Inject constructor(
     override suspend fun refreshPins(): Result<Unit> {
         return try {
             val response = api.getPins(emptyMap())
+            Log.d("SYNC_DEBUG", "code=${response.code()} msg=${response.message()}")
+            Log.d("SYNC_DEBUG", "error=${response.errorBody()?.string()}")
             if (response.isSuccessful) {
                 val remotePins = response.body()?.pins ?: emptyList()
                 pinDao.insertPins(remotePins.map { it.toEntity() })
                 Result.success(Unit)
-            } else Result.failure(Exception("Error al sincronizar"))
-        } catch (e: Exception) { Result.failure(e) }
+            } else Result.failure(Exception("Error ${response.code()}"))
+        } catch (e: Exception) {
+            Log.e("SYNC_DEBUG", "Excepción: ${e.message}", e)
+            Result.failure(e)
+        }
     }
 
     override suspend fun getPins(): List<Pin> {

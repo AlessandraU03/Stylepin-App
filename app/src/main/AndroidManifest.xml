@@ -22,6 +22,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Stylepin">
 
+        <!-- ← FIX: evita que WorkManager se inicialice con su factory default -->
+        <!-- Sin esto, HiltWorkerFactory nunca se usa y SyncWorker no puede crearse -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
         <service
             android:name=".core.network.FirebaseMessagingService"
             android:exported="false">
@@ -47,10 +60,10 @@
             android:theme="@style/Theme.Stylepin">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
     </application>
 
 </manifest>
