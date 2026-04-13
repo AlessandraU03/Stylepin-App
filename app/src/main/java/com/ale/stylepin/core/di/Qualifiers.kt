@@ -1,6 +1,6 @@
 package com.ale.stylepin.core.di
 
-import jakarta.inject.Qualifier
+import javax.inject.Qualifier
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)

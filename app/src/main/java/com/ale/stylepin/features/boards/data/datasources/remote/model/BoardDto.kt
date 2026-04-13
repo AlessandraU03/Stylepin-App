@@ -1,111 +1,105 @@
 package com.ale.stylepin.features.boards.data.datasources.remote.model
 
-import kotlinx.serialization.Serializable
+import com.google.gson.annotations.SerializedName
 
 // ── Responses ─────────────────────────────────────────────
+// IMPORTANTE: NO usar @Serializable (kotlinx) porque Retrofit usa GsonConverterFactory.
+// Gson ignora @Serializable y falla silenciosamente si un campo requerido viene null.
+// Todos los campos tienen valores por defecto para que Gson siempre pueda construir el objeto.
 
-@Serializable
 data class BoardDto(
-    val id: String,
-    val user_id: String,
-    val user_username: String,
-    val user_full_name: String? = null,
-    val user_avatar_url: String? = null,
-    val name: String,
-    val description: String? = null,
-    val cover_image_url: String? = null,
-    val is_private: Boolean = false,
-    val is_collaborative: Boolean = false,
-    val pins_count: Int = 0,
-    val created_at: String,
-    val updated_at: String? = null,
-    val is_owner: Boolean = false,
-    val is_collaborator: Boolean = false
+    @SerializedName("id")               val id: String = "",
+    @SerializedName("user_id")          val user_id: String = "",
+    @SerializedName("user_username")    val user_username: String = "",
+    @SerializedName("user_full_name")   val user_full_name: String? = null,
+    @SerializedName("user_avatar_url")  val user_avatar_url: String? = null,
+    @SerializedName("name")             val name: String = "",
+    @SerializedName("description")      val description: String? = null,
+    @SerializedName("cover_image_url")  val cover_image_url: String? = null,
+    @SerializedName("is_private")       val is_private: Boolean = false,
+    @SerializedName("is_collaborative") val is_collaborative: Boolean = false,
+    @SerializedName("pins_count")       val pins_count: Int = 0,
+    @SerializedName("created_at")       val created_at: String = "",
+    @SerializedName("updated_at")       val updated_at: String? = null,
+    @SerializedName("is_owner")         val is_owner: Boolean = false,
+    @SerializedName("is_collaborator")  val is_collaborator: Boolean = false
 )
 
-@Serializable
 data class BoardListResponse(
-    val boards: List<BoardDto>,
-    val total: Int,
-    val limit: Int,
-    val offset: Int,
-    val has_more: Boolean
+    @SerializedName("boards")   val boards: List<BoardDto> = emptyList(),
+    @SerializedName("total")    val total: Int = 0,
+    @SerializedName("limit")    val limit: Int = 20,
+    @SerializedName("offset")   val offset: Int = 0,
+    @SerializedName("has_more") val has_more: Boolean = false
 )
 
-@Serializable
 data class BoardPinResponse(
-    val id: String,
-    val board_id: String,
-    val pin_id: String,
-    val user_id: String,
-    val notes: String? = null,
-    val created_at: String
+    @SerializedName("id")         val id: String = "",
+    @SerializedName("board_id")   val board_id: String = "",
+    @SerializedName("pin_id")     val pin_id: String = "",
+    @SerializedName("user_id")    val user_id: String = "",
+    @SerializedName("notes")      val notes: String? = null,
+    @SerializedName("created_at") val created_at: String = ""
 )
 
-@Serializable
 data class BoardPinListResponse(
-    val pins: List<BoardPinResponse>,
-    val total: Int,
-    val limit: Int,
-    val offset: Int,
-    val has_more: Boolean
+    @SerializedName("pins")     val pins: List<BoardPinResponse> = emptyList(),
+    @SerializedName("total")    val total: Int = 0,
+    @SerializedName("limit")    val limit: Int = 20,
+    @SerializedName("offset")   val offset: Int = 0,
+    @SerializedName("has_more") val has_more: Boolean = false
 )
 
-@Serializable
 data class BoardCollaboratorResponse(
-    val id: String,
-    val board_id: String,
-    val user_id: String,
-    val user_username: String,
-    val user_full_name: String,
-    val user_avatar_url: String? = null,
-    val can_edit: Boolean,
-    val can_add_pins: Boolean,
-    val can_remove_pins: Boolean,
-    val created_at: String
+    @SerializedName("id")              val id: String = "",
+    @SerializedName("board_id")        val board_id: String = "",
+    @SerializedName("user_id")         val user_id: String = "",
+    @SerializedName("user_username")   val user_username: String = "",
+    @SerializedName("user_full_name")  val user_full_name: String = "",
+    @SerializedName("user_avatar_url") val user_avatar_url: String? = null,
+    @SerializedName("can_edit")        val can_edit: Boolean = false,
+    @SerializedName("can_add_pins")    val can_add_pins: Boolean = true,
+    @SerializedName("can_remove_pins") val can_remove_pins: Boolean = false,
+    @SerializedName("created_at")      val created_at: String = ""
 )
 
-@Serializable
 data class CollaboratorListResponse(
-    val collaborators: List<BoardCollaboratorResponse>
+    @SerializedName("collaborators") val collaborators: List<BoardCollaboratorResponse> = emptyList()
 )
 
 // ── Requests ──────────────────────────────────────────────
+// Gson serializa estos objetos usando @SerializedName para que el JSON
+// tenga los nombres snake_case que espera la API Python.
 
-@Serializable
 data class CreateBoardRequest(
-    val name: String,
-    val description: String? = null,
-    val is_private: Boolean = false,
-    val is_collaborative: Boolean = false
+    @SerializedName("name")             val name: String,
+    @SerializedName("description")      val description: String? = null,
+    @SerializedName("is_private")       val is_private: Boolean = false,
+    @SerializedName("is_collaborative") val is_collaborative: Boolean = false
 )
 
-@Serializable
 data class UpdateBoardRequest(
-    val name: String,
-    val description: String? = null,
-    val is_private: Boolean = false,
-    val is_collaborative: Boolean = false,
-    val cover_image_url: String? = null
+    @SerializedName("name")             val name: String,
+    @SerializedName("description")      val description: String? = null,
+    @SerializedName("is_private")       val is_private: Boolean = false,
+    @SerializedName("is_collaborative") val is_collaborative: Boolean = false,
+    @SerializedName("cover_image_url")  val cover_image_url: String? = null
 )
 
-@Serializable
 data class AddPinToBoardRequest(
-    val pin_id: String,
-    val notes: String? = null
+    @SerializedName("pin_id") val pin_id: String,
+    @SerializedName("notes")  val notes: String? = null
 )
 
-@Serializable
 data class AddCollaboratorRequest(
-    val user_id: String,
-    val can_edit: Boolean = false,
-    val can_add_pins: Boolean = true,
-    val can_remove_pins: Boolean = false
+    @SerializedName("user_id")         val user_id: String,
+    @SerializedName("can_edit")        val can_edit: Boolean = false,
+    @SerializedName("can_add_pins")    val can_add_pins: Boolean = true,
+    @SerializedName("can_remove_pins") val can_remove_pins: Boolean = false
 )
 
-@Serializable
 data class UpdateCollaboratorRequest(
-    val can_edit: Boolean = false,
-    val can_add_pins: Boolean = true,
-    val can_remove_pins: Boolean = false
+    @SerializedName("can_edit")        val can_edit: Boolean = false,
+    @SerializedName("can_add_pins")    val can_add_pins: Boolean = true,
+    @SerializedName("can_remove_pins") val can_remove_pins: Boolean = false
 )

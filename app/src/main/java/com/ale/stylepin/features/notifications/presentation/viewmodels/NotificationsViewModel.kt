@@ -1,5 +1,6 @@
 package com.ale.stylepin.features.notifications.presentation.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ale.stylepin.features.notifications.domain.entities.Notification
@@ -26,25 +27,39 @@ class NotificationsViewModel @Inject constructor(
     val uiState: StateFlow<NotificationsUiState> = _uiState.asStateFlow()
 
     init {
+        Log.d("NOTIF_VM", "ViewModel creado, llamando getNotifications()")
         getNotifications()
     }
 
     fun getNotifications() {
+        Log.d("NOTIF_VM", "getNotifications() iniciado")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            getNotificationsUseCase()
-                .onSuccess { notifications ->
-                    _uiState.value = _uiState.value.copy(
-                        notifications = notifications,
-                        isLoading = false
-                    )
-                }
-                .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = error.message
-                    )
-                }
+            Log.d("NOTIF_VM", "Llamando al use case...")
+
+            try {
+                getNotificationsUseCase()
+                    .onSuccess { notifications ->
+                        Log.d("NOTIF_VM", "✅ Éxito: ${notifications.size} notificaciones")
+                        _uiState.value = _uiState.value.copy(
+                            notifications = notifications,
+                            isLoading = false
+                        )
+                    }
+                    .onFailure { error ->
+                        Log.e("NOTIF_VM", "❌ Error: ${error.message}", error)
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = error.message
+                        )
+                    }
+            } catch (e: Exception) {
+                Log.e("NOTIF_VM", "❌ Excepción: ${e.message}", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message
+                )
+            }
         }
     }
 }

@@ -26,7 +26,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ProfileUiState(
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = true,          // Loading del perfil completo (primera carga)
+    val isBoardsLoading: Boolean = false,   // Loading solo de tableros/guardados (al volver)
     val isUploadingAvatar: Boolean = false,
     val profile: Profile? = null,
     val error: String? = null,
@@ -50,15 +51,11 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState = _uiState.asStateFlow()
 
-    // Mapa interno: pinId → boardIds donde está guardado (para poder quitarlo de todos)
     private val _pinBoardMap = mutableMapOf<String, MutableList<String>>()
 
     init {
-        // ← CORRECCIÓN PRINCIPAL: cargar datos al crear el ViewModel,
-        // no esperar a que ProfileScreen llame refresh() desde el DisposableEffect
         refresh()
 
-        // Escuchar Room para actualizar pins creados en tiempo real
         getPinsUseCase.executeFlow().onEach { allPins ->
             val profileId = _uiState.value.profile?.id
             if (profileId != null) {
@@ -67,51 +64,28 @@ class ProfileViewModel @Inject constructor(
         }.launchIn(viewModelScope)
     }
 
+    /** Carga completa: perfil + tableros + guardados. Solo para la primera vez o "Reintentar". */
     fun refresh() {
         viewModelScope.launch {
-            // Mostrar loading pero conservar el perfil si ya estaba cargado
-            // (evita pantalla completamente vacía al recargar)
             _uiState.update { it.copy(isLoading = true, error = null) }
-
             try {
-                // 1. Perfil del usuario
                 val profile = getMyProfileUseCase.execute()
                 _uiState.update { it.copy(profile = profile) }
 
-                // 2. Tableros y pins creados en paralelo
                 val boardsJob = async { getUserBoardsUseCase(profile.id).getOrNull() ?: emptyList() }
                 val pinsJob   = async { getPinsUseCase().getOrNull() ?: emptyList() }
 
                 val boards  = boardsJob.await()
                 val allPins = pinsJob.await()
-                val created = allPins.filter { it.userId == profile.id }
 
-                _uiState.update { it.copy(userBoards = boards, userPins = created) }
-
-                // 3. Pins guardados: recorrer todos los tableros en paralelo
-                _pinBoardMap.clear()
-                if (boards.isNotEmpty()) {
-                    val boardPinsJobs = boards.map { board ->
-                        async {
-                            val bps = getBoardPinsUseCase(board.id).getOrNull() ?: emptyList()
-                            // Registrar en el mapa para poder quitar después
-                            bps.forEach { bp ->
-                                _pinBoardMap.getOrPut(bp.pinId) { mutableListOf() }.add(board.id)
-                            }
-                            bps
-                        }
-                    }
-                    val uniquePinIds = boardPinsJobs.awaitAll()
-                        .flatten()
-                        .map { it.pinId }
-                        .distinct()
-
-                    val pinDetailJobs = uniquePinIds.map { pinId ->
-                        async { getPinByIdUseCase(pinId).getOrNull() }
-                    }
-                    _uiState.update { it.copy(savedPins = pinDetailJobs.awaitAll().filterNotNull()) }
+                _uiState.update {
+                    it.copy(
+                        userBoards = boards,
+                        userPins   = allPins.filter { p -> p.userId == profile.id }
+                    )
                 }
 
+                loadSavedPins(boards)
                 _uiState.update { it.copy(isLoading = false) }
 
             } catch (e: Exception) {
@@ -121,16 +95,54 @@ class ProfileViewModel @Inject constructor(
     }
 
     /**
-     * Quita un pin guardado de TODOS los tableros donde está.
-     * Se llama desde el botón Delete del tab Guardados.
+     * Recarga SOLO tableros y guardados sin tocar el perfil ni el isLoading principal.
+     * Se llama desde ProfileScreen en ON_RESUME (al volver de CreateBoard, EditBoard, etc.)
+     * Así el header del perfil no parpadea y la experiencia es fluida.
      */
+    fun refreshBoards() {
+        val profileId = _uiState.value.profile?.id ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBoardsLoading = true) }
+            try {
+                val boards = getUserBoardsUseCase(profileId).getOrNull() ?: emptyList()
+                _uiState.update { it.copy(userBoards = boards) }
+                loadSavedPins(boards)
+            } catch (e: Exception) {
+                // Error silencioso — no borramos los datos anteriores
+            } finally {
+                _uiState.update { it.copy(isBoardsLoading = false) }
+            }
+        }
+    }
+
+    /** Carga los pins guardados a partir de la lista de tableros. */
+    private suspend fun loadSavedPins(boards: List<Board>) {
+        if (boards.isEmpty()) {
+            _uiState.update { it.copy(savedPins = emptyList()) }
+            return
+        }
+        _pinBoardMap.clear()
+        val boardPinsJobs = boards.map { board ->
+            viewModelScope.async {
+                val bps = getBoardPinsUseCase(board.id).getOrNull() ?: emptyList()
+                bps.forEach { bp ->
+                    _pinBoardMap.getOrPut(bp.pinId) { mutableListOf() }.add(board.id)
+                }
+                bps
+            }
+        }
+        val uniquePinIds = boardPinsJobs.awaitAll().flatten().map { it.pinId }.distinct()
+        val pinDetailJobs = uniquePinIds.map { pinId ->
+            viewModelScope.async { getPinByIdUseCase(pinId).getOrNull() }
+        }
+        _uiState.update { it.copy(savedPins = pinDetailJobs.awaitAll().filterNotNull()) }
+    }
+
+    /** Quita un pin de todos los tableros donde está guardado. */
     fun removeSavedPin(pinId: String) {
         viewModelScope.launch {
             val boardIds = _pinBoardMap[pinId] ?: return@launch
-            boardIds.forEach { boardId ->
-                removePinFromBoardUseCase(boardId, pinId)
-            }
-            // Actualización optimista: quitar de la lista sin esperar al servidor
+            boardIds.forEach { boardId -> removePinFromBoardUseCase(boardId, pinId) }
             _uiState.update { state ->
                 state.copy(savedPins = state.savedPins.filter { it.id != pinId })
             }

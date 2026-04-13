@@ -77,7 +77,10 @@ fun NavigationWrapper() {
                         when (title) {
                             "Inicio"         -> navController.navigate(PinsRoute) { popUpTo(PinsRoute) { inclusive = true } }
                             "Explorar"       -> navController.navigate(SearchRoute) { popUpTo(PinsRoute) }
-                            "Notificaciones" -> navController.navigate(NotificationsRoute) { popUpTo(PinsRoute) }
+                            "Notificaciones" -> {
+                                android.util.Log.d("NAV_DEBUG", "Navegando a NotificationsRoute")
+                                navController.navigate(NotificationsRoute) { popUpTo(PinsRoute) }
+                            }
                             "Perfil"         -> navController.navigate(ProfileRoute) { popUpTo(PinsRoute) }
                         }
                     }
@@ -281,6 +284,7 @@ fun NavigationWrapper() {
 
             // ── NOTIFICACIONES (histórico REST) ───────────────────────────────
             composable<NotificationsRoute> {
+                android.util.Log.d("NAV_DEBUG", "ComposableNotifications ejecutado")
                 val viewModel: NotificationsViewModel = hiltViewModel()
                 NotificationsScreen(
                     onBack = { navController.popBackStack() },
