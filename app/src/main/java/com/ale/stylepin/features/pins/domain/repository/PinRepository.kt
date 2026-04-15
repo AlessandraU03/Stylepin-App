@@ -1,9 +1,34 @@
 package com.ale.stylepin.features.pins.domain.repository
 
 import com.ale.stylepin.features.pins.domain.entities.Pin
+import com.ale.stylepin.features.pins.domain.entities.Comment
+import kotlinx.coroutines.flow.Flow
 
 interface PinsRepository {
+    fun getPinsFlow(): Flow<List<Pin>>
+    suspend fun refreshPins(): Result<Unit>
     suspend fun getPins(): List<Pin>
-    suspend fun addPin(title: String, imageUrl: String, category: String, season: String): Boolean
-    suspend fun deletePin(pinId: String): Boolean // Nueva función para eliminar
+    suspend fun getPinById(pinId: String): Pin
+
+    // NUEVO: Sincroniza el Like o Guardado inmediatamente en tu celular
+    suspend fun savePinLocal(pin: Pin)
+
+    suspend fun addPin(
+        title: String, imageUrl: String, category: String, season: String,
+        description: String?, isPrivate: Boolean, styles: List<String>,
+        occasions: List<String>, brands: List<String>, priceRange: String,
+        whereToBuy: String?, purchaseLink: String?, colors: List<String>, tags: List<String>
+    ): Boolean
+
+    suspend fun updatePin(
+        pinId: String, title: String, imageUrl: String?, category: String,
+        season: String, description: String?, isPrivate: Boolean,
+        styles: List<String>, occasions: List<String>, brands: List<String>,
+        priceRange: String, whereToBuy: String?, purchaseLink: String?,
+        colors: List<String>, tags: List<String>
+    ): Boolean
+
+    suspend fun deletePin(pinId: String): Boolean
+    suspend fun getPinComments(pinId: String): List<Comment>
+    suspend fun addComment(pinId: String, text: String): Comment
 }

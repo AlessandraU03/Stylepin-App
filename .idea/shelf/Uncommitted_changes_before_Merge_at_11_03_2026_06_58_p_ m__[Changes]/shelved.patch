@@ -1,0 +1,318 @@
+Index: app/src/main/java/com/ale/stylepin/core/navigation/Screens.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.ale.stylepin.core.navigation\r\n\r\nimport kotlinx.serialization.Serializable\r\n\r\n@Serializable object LoginRoute\r\n@Serializable object RegisterRoute\r\n\r\n@Serializable object PinsRoute\r\n@Serializable object SearchRoute\r\n@Serializable object AlertsRoute\r\n@Serializable object ProfileRoute\r\n\r\n@Serializable object EditProfileRoute\r\n@Serializable object AddPinRoute\r\n\r\n@Serializable\r\ndata class EditPinRoute(\r\n    val id: String,\r\n    val title: String,\r\n    val imageUrl: String,\r\n    val category: String,\r\n    val season: String\r\n)
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/ale/stylepin/core/navigation/Screens.kt b/app/src/main/java/com/ale/stylepin/core/navigation/Screens.kt
+--- a/app/src/main/java/com/ale/stylepin/core/navigation/Screens.kt	(revision 62e94ad5943242b8e96bfebbe5ed6d9636189b7e)
++++ b/app/src/main/java/com/ale/stylepin/core/navigation/Screens.kt	(date 1773269573513)
+@@ -20,4 +20,12 @@
+     val imageUrl: String,
+     val category: String,
+     val season: String
++)
++
++@Serializable object SettingsRoute
++
++@Serializable
++data class CommunityRoute(
++    val initialTab: Int = 0,
++    val userId: String
+ )
+\ No newline at end of file
+Index: app/src/main/java/com/ale/stylepin/features/profile/data/datasources/remote/mapper/ProfileMapper.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.ale.stylepin.features.profile.data.datasources.remote.mapper\r\n\r\nimport com.ale.stylepin.features.profile.data.datasources.remote.model.UserMeDto\r\nimport com.ale.stylepin.features.profile.data.datasources.remote.model.UserStatsDto\r\nimport com.ale.stylepin.features.profile.domain.entities.Profile\r\n\r\nfun mapToDomain(user: UserMeDto, stats: UserStatsDto): Profile {\r\n    return Profile(\r\n        id = user.id,\r\n        username = user.username,\r\n        fullName = user.fullName,\r\n        bio = user.bio ?: \"Amante del diseño y la moda.\",\r\n        avatarUrl = user.avatarUrl ?: \"\",\r\n        followersCount = stats.totalFollowers,\r\n        followingCount = stats.totalFollowing,\r\n        pinsCount = stats.totalPins\r\n    )\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/ale/stylepin/features/profile/data/datasources/remote/mapper/ProfileMapper.kt b/app/src/main/java/com/ale/stylepin/features/profile/data/datasources/remote/mapper/ProfileMapper.kt
+--- a/app/src/main/java/com/ale/stylepin/features/profile/data/datasources/remote/mapper/ProfileMapper.kt	(revision 62e94ad5943242b8e96bfebbe5ed6d9636189b7e)
++++ b/app/src/main/java/com/ale/stylepin/features/profile/data/datasources/remote/mapper/ProfileMapper.kt	(date 1773246708163)
+@@ -9,8 +9,8 @@
+         id = user.id,
+         username = user.username,
+         fullName = user.fullName,
+-        bio = user.bio ?: "Amante del diseño y la moda.",
+-        avatarUrl = user.avatarUrl ?: "",
++        bio = user.bio ?: "Sin biografía", // Valor seguro si el backend devuelve null
++        avatarUrl = user.avatarUrl ?: "", // Valor seguro
+         followersCount = stats.totalFollowers,
+         followingCount = stats.totalFollowing,
+         pinsCount = stats.totalPins
+Index: app/src/main/java/com/ale/stylepin/features/profile/data/repositories/ProfileRepositoryImpl.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.ale.stylepin.features.profile.data.repositories\r\n\r\nimport com.ale.stylepin.features.profile.data.datasources.remote.api.ProfileApi\r\nimport com.ale.stylepin.features.profile.data.datasources.remote.mapper.mapToDomain\r\nimport com.ale.stylepin.features.profile.domain.entities.Profile\r\nimport com.ale.stylepin.features.profile.domain.repositories.ProfileRepository\r\nimport kotlinx.coroutines.async\r\nimport kotlinx.coroutines.coroutineScope\r\nimport javax.inject.Inject\r\n\r\nclass ProfileRepositoryImpl @Inject constructor(\r\n    private val api: ProfileApi\r\n) : ProfileRepository {\r\n\r\n    override suspend fun getMyProfile(): Profile = coroutineScope {\r\n        val userDeferred = async { api.getMyProfile() }\r\n        val statsDeferred = async { api.getMyStats() }\r\n\r\n        val user = userDeferred.await()\r\n        val stats = statsDeferred.await()\r\n\r\n        return@coroutineScope mapToDomain(user, stats)\r\n    }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/ale/stylepin/features/profile/data/repositories/ProfileRepositoryImpl.kt b/app/src/main/java/com/ale/stylepin/features/profile/data/repositories/ProfileRepositoryImpl.kt
+--- a/app/src/main/java/com/ale/stylepin/features/profile/data/repositories/ProfileRepositoryImpl.kt	(revision 62e94ad5943242b8e96bfebbe5ed6d9636189b7e)
++++ b/app/src/main/java/com/ale/stylepin/features/profile/data/repositories/ProfileRepositoryImpl.kt	(date 1773246683011)
+@@ -1,24 +1,31 @@
+ package com.ale.stylepin.features.profile.data.repositories
+ 
++import android.util.Log
+ import com.ale.stylepin.features.profile.data.datasources.remote.api.ProfileApi
+ import com.ale.stylepin.features.profile.data.datasources.remote.mapper.mapToDomain
++import com.ale.stylepin.features.profile.data.datasources.remote.model.UserStatsDto
+ import com.ale.stylepin.features.profile.domain.entities.Profile
+ import com.ale.stylepin.features.profile.domain.repositories.ProfileRepository
+-import kotlinx.coroutines.async
+-import kotlinx.coroutines.coroutineScope
+ import javax.inject.Inject
+ 
+ class ProfileRepositoryImpl @Inject constructor(
+     private val api: ProfileApi
+ ) : ProfileRepository {
+ 
+-    override suspend fun getMyProfile(): Profile = coroutineScope {
+-        val userDeferred = async { api.getMyProfile() }
+-        val statsDeferred = async { api.getMyStats() }
++    override suspend fun getMyProfile(): Profile {
++        // 1. Obtenemos el perfil principal (Este rara vez falla)
++        val user = api.getMyProfile()
+ 
+-        val user = userDeferred.await()
+-        val stats = statsDeferred.await()
++        // 2. Obtenemos las estadísticas de forma SEGURA.
++        // Si el backend lanza el Error 500 aquí, lo atrapamos y no rompemos la app.
++        val stats = try {
++            api.getMyStats()
++        } catch (e: Exception) {
++            Log.e("ProfileRepository", "El backend falló al traer las stats: ${e.message}")
++            // Si el servidor falla, le decimos a la app que asuma que todo está en CERO.
++            UserStatsDto(totalPins = 0, totalFollowers = 0, totalFollowing = 0, totalBoards = 0)
++        }
+ 
+-        return@coroutineScope mapToDomain(user, stats)
++        return mapToDomain(user, stats)
+     }
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/ale/stylepin/features/profile/data/datasources/remote/model/ProfileModels.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.ale.stylepin.features.profile.data.datasources.remote.model\r\n\r\nimport com.google.gson.annotations.SerializedName\r\n\r\ndata class UserMeDto(\r\n    val id: String,\r\n    val username: String,\r\n    val email: String,\r\n    @SerializedName(\"full_name\") val fullName: String,\r\n    val bio: String? = null,\r\n    @SerializedName(\"avatar_url\") val avatarUrl: String? = null,\r\n    val gender: String,\r\n    @SerializedName(\"preferred_styles\") val preferredStyles: List<String>,\r\n    @SerializedName(\"is_verified\") val isVerified: Boolean,\r\n    val role: String,\r\n    @SerializedName(\"created_at\") val createdAt: String\r\n)\r\n\r\ndata class UserStatsDto(\r\n    @SerializedName(\"total_pins\") val totalPins: Int,\r\n    @SerializedName(\"total_followers\") val totalFollowers: Int,\r\n    @SerializedName(\"total_following\") val totalFollowing: Int,\r\n    @SerializedName(\"total_boards\") val totalBoards: Int\r\n)\r\n\r\ndata class UpdateProfileRequest(\r\n    @SerializedName(\"full_name\") val fullName: String? = null,\r\n    val bio: String? = null,\r\n    @SerializedName(\"avatar_url\") val avatarUrl: String? = null,\r\n    val gender: String? = null,\r\n    @SerializedName(\"preferred_styles\") val preferredStyles: List<String>? = null\r\n)\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/ale/stylepin/features/profile/data/datasources/remote/model/ProfileModels.kt b/app/src/main/java/com/ale/stylepin/features/profile/data/datasources/remote/model/ProfileModels.kt
+--- a/app/src/main/java/com/ale/stylepin/features/profile/data/datasources/remote/model/ProfileModels.kt	(revision 62e94ad5943242b8e96bfebbe5ed6d9636189b7e)
++++ b/app/src/main/java/com/ale/stylepin/features/profile/data/datasources/remote/model/ProfileModels.kt	(date 1773246697088)
+@@ -9,24 +9,16 @@
+     @SerializedName("full_name") val fullName: String,
+     val bio: String? = null,
+     @SerializedName("avatar_url") val avatarUrl: String? = null,
+-    val gender: String,
+-    @SerializedName("preferred_styles") val preferredStyles: List<String>,
+-    @SerializedName("is_verified") val isVerified: Boolean,
+-    val role: String,
+-    @SerializedName("created_at") val createdAt: String
+-)
+-
+-data class UserStatsDto(
+-    @SerializedName("total_pins") val totalPins: Int,
+-    @SerializedName("total_followers") val totalFollowers: Int,
+-    @SerializedName("total_following") val totalFollowing: Int,
+-    @SerializedName("total_boards") val totalBoards: Int
+-)
+-
+-data class UpdateProfileRequest(
+-    @SerializedName("full_name") val fullName: String? = null,
+-    val bio: String? = null,
+-    @SerializedName("avatar_url") val avatarUrl: String? = null,
+     val gender: String? = null,
+-    @SerializedName("preferred_styles") val preferredStyles: List<String>? = null
++    @SerializedName("preferred_styles") val preferredStyles: List<String>? = emptyList(),
++    @SerializedName("is_verified") val isVerified: Boolean = false,
++    val role: String? = "user",
++    @SerializedName("created_at") val createdAt: String? = null
+ )
++
++data class UserStatsDto(
++    @SerializedName("total_pins") val totalPins: Int = 0,
++    @SerializedName("total_followers") val totalFollowers: Int = 0,
++    @SerializedName("total_following") val totalFollowing: Int = 0,
++    @SerializedName("total_boards") val totalBoards: Int = 0
++)
+\ No newline at end of file
+Index: app/src/main/java/com/ale/stylepin/features/auth/presentation/screens/RegisterScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.ale.stylepin.features.auth.presentation.screens\r\n\r\nimport androidx.compose.foundation.layout.*\r\nimport androidx.compose.foundation.rememberScrollState\r\nimport androidx.compose.foundation.verticalScroll\r\nimport androidx.compose.material.icons.Icons\r\nimport androidx.compose.material.icons.outlined.AlternateEmail\r\nimport androidx.compose.material.icons.outlined.Email\r\nimport androidx.compose.material.icons.outlined.Lock\r\nimport androidx.compose.material.icons.outlined.Person\r\nimport androidx.compose.material3.*\r\nimport androidx.compose.runtime.*\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.graphics.Color\r\nimport androidx.compose.ui.text.font.FontWeight\r\nimport androidx.compose.ui.unit.dp\r\nimport androidx.compose.ui.unit.sp\r\nimport androidx.lifecycle.compose.collectAsStateWithLifecycle\r\nimport com.ale.stylepin.features.auth.presentation.components.StylePinPasswordField\r\nimport com.ale.stylepin.features.auth.presentation.components.StylePinTextField\r\nimport com.ale.stylepin.features.auth.presentation.viewmodels.RegisterViewModel\r\n\r\n@Composable\r\nfun RegisterScreen(\r\n    viewModel: RegisterViewModel,\r\n    onRegisterSuccess: () -> Unit,\r\n    onNavigateToLogin: () -> Unit\r\n) {\r\n    val uiState by viewModel.uiState.collectAsStateWithLifecycle()\r\n    val scrollState = rememberScrollState()\r\n\r\n    val isFormValid = uiState.username.isNotBlank() && uiState.email.contains(\"@\") &&\r\n            uiState.password.length >= 8 && uiState.fullName.isNotBlank()\r\n\r\n    Column(\r\n        modifier = Modifier\r\n            .fillMaxSize()\r\n            .padding(horizontal = 32.dp)\r\n            .verticalScroll(scrollState),\r\n        horizontalAlignment = Alignment.CenterHorizontally,\r\n        verticalArrangement = Arrangement.Center\r\n    ) {\r\n        Spacer(modifier = Modifier.height(48.dp))\r\n\r\n        Text(\r\n            text = \"StylePin\",\r\n            fontSize = 48.sp,\r\n            fontWeight = FontWeight.Medium,\r\n            color = MaterialTheme.colorScheme.onBackground\r\n        )\r\n\r\n        Spacer(modifier = Modifier.height(48.dp))\r\n\r\n        StylePinTextField(\r\n            value = uiState.fullName,\r\n            onValueChange = { viewModel.onFullNameChanged(it) },\r\n            label = \"Nombre completo\",\r\n            icon = Icons.Outlined.Person\r\n        )\r\n        Spacer(modifier = Modifier.height(16.dp))\r\n\r\n        StylePinTextField(\r\n            value = uiState.username,\r\n            onValueChange = { viewModel.onUsernameChanged(it) },\r\n            label = \"Usuario\",\r\n            icon = Icons.Outlined.AlternateEmail\r\n        )\r\n        Spacer(modifier = Modifier.height(16.dp))\r\n\r\n        StylePinTextField(\r\n            value = uiState.email,\r\n            onValueChange = { viewModel.onEmailChanged(it) },\r\n            label = \"Correo electrónico\",\r\n            icon = Icons.Outlined.Email\r\n        )\r\n        Spacer(modifier = Modifier.height(16.dp))\r\n\r\n        StylePinPasswordField(\r\n            value = uiState.password,\r\n            onValueChange = { viewModel.onPasswordChanged(it) },\r\n            label = \"Contraseña\",\r\n            icon = Icons.Outlined.Lock\r\n        )\r\n        Spacer(modifier = Modifier.height(24.dp))\r\n\r\n        // Selector de Género\r\n        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {\r\n            val genders = listOf(\"female\" to \"Mujer\", \"male\" to \"Hombre\", \"other\" to \"Otro\")\r\n            genders.forEach { (value, label) ->\r\n                FilterChip(\r\n                    selected = uiState.gender == value,\r\n                    onClick = { viewModel.onGenderChanged(value) },\r\n                    label = { Text(label, modifier = Modifier.padding(horizontal = 8.dp)) },\r\n                    shape = MaterialTheme.shapes.large,\r\n                    colors = FilterChipDefaults.filterChipColors(\r\n                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,\r\n                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer\r\n                    )\r\n                )\r\n            }\r\n        }\r\n\r\n        Spacer(modifier = Modifier.height(32.dp))\r\n\r\n        Button(\r\n            onClick = { viewModel.register() },\r\n            modifier = Modifier.fillMaxWidth().height(50.dp),\r\n            shape = MaterialTheme.shapes.extraLarge,\r\n            enabled = isFormValid && !uiState.isLoading\r\n        ) {\r\n            if (uiState.isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))\r\n            else Text(\"Registrarse\", fontSize = 16.sp)\r\n        }\r\n\r\n        Spacer(modifier = Modifier.height(16.dp))\r\n        TextButton(onClick = onNavigateToLogin) {\r\n            Text(\"¿Ya tienes cuenta? Entrar\", color = MaterialTheme.colorScheme.primary)\r\n        }\r\n        Spacer(modifier = Modifier.height(48.dp))\r\n\r\n        LaunchedEffect(uiState.isLoginSuccess) {\r\n            if (uiState.isLoginSuccess) onRegisterSuccess()\r\n        }\r\n    }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/ale/stylepin/features/auth/presentation/screens/RegisterScreen.kt b/app/src/main/java/com/ale/stylepin/features/auth/presentation/screens/RegisterScreen.kt
+--- a/app/src/main/java/com/ale/stylepin/features/auth/presentation/screens/RegisterScreen.kt	(revision 62e94ad5943242b8e96bfebbe5ed6d9636189b7e)
++++ b/app/src/main/java/com/ale/stylepin/features/auth/presentation/screens/RegisterScreen.kt	(date 1773265852624)
+@@ -14,6 +14,7 @@
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+@@ -122,5 +123,14 @@
+         LaunchedEffect(uiState.isLoginSuccess) {
+             if (uiState.isLoginSuccess) onRegisterSuccess()
+         }
++
++        uiState.error?.let { msg ->
++            Text(
++                text = msg,
++                color = MaterialTheme.colorScheme.error,
++                modifier = Modifier.padding(top = 16.dp),
++                textAlign = TextAlign.Center
++            )
++        }
+     }
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/ale/stylepin/features/auth/data/repositories/AuthRepositoryImpl.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.ale.stylepin.features.auth.data.repositories\r\n\r\nimport android.content.SharedPreferences\r\nimport com.ale.stylepin.core.network.StylePinApi\r\nimport com.ale.stylepin.features.auth.data.datasources.remote.model.LoginRequest\r\nimport com.ale.stylepin.features.auth.data.datasources.remote.model.RegisterRequest\r\nimport com.ale.stylepin.features.auth.domain.repositories.AuthRepository\r\nimport com.ale.stylepin.features.auth.domain.entities.UserToken\r\nimport org.json.JSONObject\r\nimport retrofit2.HttpException\r\nimport javax.inject.Inject\r\n\r\nclass AuthRepositoryImpl @Inject constructor(\r\n    private val api: StylePinApi,\r\n    private val prefs: SharedPreferences\r\n) : AuthRepository {\r\n\r\n    override suspend fun login(identity: String, pass: String): UserToken {\r\n        try {\r\n            val response = api.login(LoginRequest(identity, pass))\r\n            prefs.edit().putString(\"auth_token\", response.token).apply()\r\n            return UserToken(token = response.token, username = response.user.username)\r\n        } catch (e: HttpException) {\r\n            throw Exception(parseErrorMessage(e))\r\n        }\r\n    }\r\n\r\n    override suspend fun register(\r\n        username: String, email: String, pass: String, fullName: String, gender: String\r\n    ): UserToken {\r\n        try {\r\n            val request = RegisterRequest(\r\n                username = username.trim(), email = email.trim(), password = pass,\r\n                fullName = fullName.trim(), gender = gender.lowercase().trim(), preferredStyles = emptyList()\r\n            )\r\n            val response = api.register(request)\r\n            prefs.edit().putString(\"auth_token\", response.token).apply()\r\n            return UserToken(token = response.token, username = response.user.username)\r\n        } catch (e: HttpException) {\r\n            throw Exception(parseErrorMessage(e))\r\n        }\r\n    }\r\n\r\n    private fun parseErrorMessage(exception: HttpException): String {\r\n        val code = exception.code()\r\n\r\n        // Mensajes amigables para errores comunes HTTP\r\n        if (code == 401) return \"Usuario o contraseña incorrectos.\"\r\n        if (code == 409 || code == 422) return \"Verifica tus datos. Es posible que el correo o usuario ya estén registrados.\"\r\n\r\n        return try {\r\n            val errorBody = exception.response()?.errorBody()?.string()\r\n            if (errorBody != null) {\r\n                val json = JSONObject(errorBody)\r\n                when {\r\n                    json.has(\"details\") -> {\r\n                        val details = json.getJSONArray(\"details\")\r\n                        if (details.length() > 0) details.getJSONObject(0).getString(\"message\")\r\n                        else json.optString(\"message\", \"Error desconocido\")\r\n                    }\r\n                    json.has(\"message\") -> json.getString(\"message\")\r\n                    else -> \"Error en el servidor ($code)\"\r\n                }\r\n            } else {\r\n                \"Error en el servidor ($code)\"\r\n            }\r\n        } catch (e: Exception) {\r\n            \"No se pudo conectar con el servidor.\"\r\n        }\r\n    }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/ale/stylepin/features/auth/data/repositories/AuthRepositoryImpl.kt b/app/src/main/java/com/ale/stylepin/features/auth/data/repositories/AuthRepositoryImpl.kt
+--- a/app/src/main/java/com/ale/stylepin/features/auth/data/repositories/AuthRepositoryImpl.kt	(revision 62e94ad5943242b8e96bfebbe5ed6d9636189b7e)
++++ b/app/src/main/java/com/ale/stylepin/features/auth/data/repositories/AuthRepositoryImpl.kt	(date 1773264971863)
+@@ -1,17 +1,19 @@
++// com/ale/stylepin/features/auth/data/repositories/AuthRepositoryImpl.kt
+ package com.ale.stylepin.features.auth.data.repositories
+ 
+ import android.content.SharedPreferences
+-import com.ale.stylepin.core.network.StylePinApi
++import com.ale.stylepin.features.auth.data.datasources.remote.api.AuthApi
++import com.ale.stylepin.features.auth.data.datasources.remote.mapper.toDomain
+ import com.ale.stylepin.features.auth.data.datasources.remote.model.LoginRequest
+ import com.ale.stylepin.features.auth.data.datasources.remote.model.RegisterRequest
+-import com.ale.stylepin.features.auth.domain.repositories.AuthRepository
+ import com.ale.stylepin.features.auth.domain.entities.UserToken
++import com.ale.stylepin.features.auth.domain.repositories.AuthRepository
+ import org.json.JSONObject
+ import retrofit2.HttpException
+ import javax.inject.Inject
+ 
+ class AuthRepositoryImpl @Inject constructor(
+-    private val api: StylePinApi,
++    private val api: AuthApi, // Usamos AuthApi, no la global
+     private val prefs: SharedPreferences
+ ) : AuthRepository {
+ 
+@@ -19,7 +21,9 @@
+         try {
+             val response = api.login(LoginRequest(identity, pass))
+             prefs.edit().putString("auth_token", response.token).apply()
+-            return UserToken(token = response.token, username = response.user.username)
++
++            // Usamos tu mapper toDomain() en lugar de instanciarlo a mano
++            return response.toDomain()
+         } catch (e: HttpException) {
+             throw Exception(parseErrorMessage(e))
+         }
+@@ -35,7 +39,8 @@
+             )
+             val response = api.register(request)
+             prefs.edit().putString("auth_token", response.token).apply()
+-            return UserToken(token = response.token, username = response.user.username)
++
++            return response.toDomain() // Usamos tu mapper
+         } catch (e: HttpException) {
+             throw Exception(parseErrorMessage(e))
+         }
+@@ -43,8 +48,6 @@
+ 
+     private fun parseErrorMessage(exception: HttpException): String {
+         val code = exception.code()
+-
+-        // Mensajes amigables para errores comunes HTTP
+         if (code == 401) return "Usuario o contraseña incorrectos."
+         if (code == 409 || code == 422) return "Verifica tus datos. Es posible que el correo o usuario ya estén registrados."
+ 
+Index: app/src/main/java/com/ale/stylepin/features/auth/data/datasources/remote/api/AuthApi.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.ale.stylepin.features.auth.data.datasources.remote.api\r\n\r\ninterface AuthApi {\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/ale/stylepin/features/auth/data/datasources/remote/api/AuthApi.kt b/app/src/main/java/com/ale/stylepin/features/auth/data/datasources/remote/api/AuthApi.kt
+--- a/app/src/main/java/com/ale/stylepin/features/auth/data/datasources/remote/api/AuthApi.kt	(revision 62e94ad5943242b8e96bfebbe5ed6d9636189b7e)
++++ b/app/src/main/java/com/ale/stylepin/features/auth/data/datasources/remote/api/AuthApi.kt	(date 1773264706249)
+@@ -1,4 +1,16 @@
++// com/ale/stylepin/features/auth/data/datasources/remote/api/AuthApi.kt
+ package com.ale.stylepin.features.auth.data.datasources.remote.api
+ 
++import com.ale.stylepin.features.auth.data.datasources.remote.model.AuthResponse
++import com.ale.stylepin.features.auth.data.datasources.remote.model.LoginRequest
++import com.ale.stylepin.features.auth.data.datasources.remote.model.RegisterRequest
++import retrofit2.http.Body
++import retrofit2.http.POST
++
+ interface AuthApi {
++    @POST("api/v1/auth/login")
++    suspend fun login(@Body request: LoginRequest): AuthResponse
++
++    @POST("api/v1/auth/register")
++    suspend fun register(@Body request: RegisterRequest): AuthResponse
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/ale/stylepin/core/network/StylePinApi.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.ale.stylepin.core.network\r\n\r\nimport com.ale.stylepin.features.auth.data.datasources.remote.model.LoginRequest\r\nimport com.ale.stylepin.features.auth.data.datasources.remote.model.RegisterRequest\r\nimport com.ale.stylepin.features.auth.data.datasources.remote.model.AuthResponse\r\nimport com.ale.stylepin.features.pins.data.datasources.remote.model.AddPinRequest\r\nimport com.ale.stylepin.features.pins.data.datasources.remote.model.PinResponse\r\nimport com.ale.stylepin.features.pins.data.datasources.remote.model.UpdatePinRequest\r\nimport retrofit2.Response\r\nimport retrofit2.http.Body\r\nimport retrofit2.http.DELETE\r\nimport retrofit2.http.GET\r\nimport retrofit2.http.POST\r\nimport retrofit2.http.Path\r\nimport retrofit2.http.PATCH\r\n\r\ninterface StylePinApi {\r\n    @POST(\"api/v1/auth/login\")\r\n    suspend fun login(@Body request: LoginRequest): AuthResponse\r\n\r\n    @POST(\"api/v1/auth/register\")\r\n    suspend fun register(@Body request: RegisterRequest): AuthResponse\r\n\r\n    @GET(\"api/v1/pins\")\r\n    suspend fun getPins(): List<PinResponse>\r\n\r\n    // ... dentro de interface StylePinApi\r\n    @POST(\"api/v1/pins\")\r\n    suspend fun addPin(@Body request: AddPinRequest): PinResponse\r\n\r\n    @DELETE(\"api/v1/pins/{pin_id}\")\r\n    suspend fun deletePin(\r\n        @Path(\"pin_id\") pinId: String\r\n    ): Response<Unit>\r\n\r\n    @PATCH(\"api/v1/pins/{pin_id}\")\r\n    suspend fun updatePin(\r\n        @Path(\"pin_id\") pinId: String,\r\n        @Body request: UpdatePinRequest\r\n    ): PinResponse\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/ale/stylepin/core/network/StylePinApi.kt b/app/src/main/java/com/ale/stylepin/core/network/StylePinApi.kt
+--- a/app/src/main/java/com/ale/stylepin/core/network/StylePinApi.kt	(revision 62e94ad5943242b8e96bfebbe5ed6d9636189b7e)
++++ b/app/src/main/java/com/ale/stylepin/core/network/StylePinApi.kt	(date 1773267086242)
+@@ -1,8 +1,5 @@
+ package com.ale.stylepin.core.network
+ 
+-import com.ale.stylepin.features.auth.data.datasources.remote.model.LoginRequest
+-import com.ale.stylepin.features.auth.data.datasources.remote.model.RegisterRequest
+-import com.ale.stylepin.features.auth.data.datasources.remote.model.AuthResponse
+ import com.ale.stylepin.features.pins.data.datasources.remote.model.AddPinRequest
+ import com.ale.stylepin.features.pins.data.datasources.remote.model.PinResponse
+ import com.ale.stylepin.features.pins.data.datasources.remote.model.UpdatePinRequest
+@@ -10,28 +7,19 @@
+ import retrofit2.http.Body
+ import retrofit2.http.DELETE
+ import retrofit2.http.GET
++import retrofit2.http.PATCH
+ import retrofit2.http.POST
+ import retrofit2.http.Path
+-import retrofit2.http.PATCH
+ 
+ interface StylePinApi {
+-    @POST("api/v1/auth/login")
+-    suspend fun login(@Body request: LoginRequest): AuthResponse
+-
+-    @POST("api/v1/auth/register")
+-    suspend fun register(@Body request: RegisterRequest): AuthResponse
+-
+     @GET("api/v1/pins")
+     suspend fun getPins(): List<PinResponse>
+ 
+-    // ... dentro de interface StylePinApi
+     @POST("api/v1/pins")
+     suspend fun addPin(@Body request: AddPinRequest): PinResponse
+ 
+     @DELETE("api/v1/pins/{pin_id}")
+-    suspend fun deletePin(
+-        @Path("pin_id") pinId: String
+-    ): Response<Unit>
++    suspend fun deletePin(@Path("pin_id") pinId: String): Response<Unit>
+ 
+     @PATCH("api/v1/pins/{pin_id}")
+     suspend fun updatePin(

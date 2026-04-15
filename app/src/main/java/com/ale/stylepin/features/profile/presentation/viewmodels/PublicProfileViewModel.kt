@@ -1,0 +1,85 @@
+package com.ale.stylepin.features.profile.presentation.viewmodels
+
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.ale.stylepin.features.boards.domain.entities.Board
+import com.ale.stylepin.features.boards.domain.usecases.GetUserBoardsUseCase
+import com.ale.stylepin.features.community.domain.usecases.CheckFollowStatusUseCase
+import com.ale.stylepin.features.community.domain.usecases.ToggleFollowUseCase
+import com.ale.stylepin.features.pins.domain.entities.Pin
+import com.ale.stylepin.features.pins.domain.usecases.GetPinsUseCase
+import com.ale.stylepin.features.profile.domain.entities.Profile
+import com.ale.stylepin.features.profile.domain.usecases.GetProfileUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class PublicProfileUiState(
+    val isLoading: Boolean = true,
+    val profile: Profile? = null,
+    val isFollowing: Boolean = false,
+    val publicPins: List<Pin> = emptyList(),
+    val publicBoards: List<Board> = emptyList(),
+    val error: String? = null
+)
+
+@HiltViewModel
+class PublicProfileViewModel @Inject constructor(
+    private val getProfileUseCase: GetProfileUseCase,
+    private val getPinsUseCase: GetPinsUseCase,
+    private val getUserBoardsUseCase: GetUserBoardsUseCase,
+    private val checkFollowStatusUseCase: CheckFollowStatusUseCase,
+    private val toggleFollowUseCase: ToggleFollowUseCase
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(PublicProfileUiState())
+    val uiState = _uiState.asStateFlow()
+
+    fun loadProfile(userId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                val profile = getProfileUseCase.execute(userId)
+                _uiState.update { it.copy(profile = profile) }
+
+                checkFollowStatusUseCase.execute(userId).onSuccess { following ->
+                    _uiState.update { it.copy(isFollowing = following) }
+                }
+
+                val allPins = getPinsUseCase().getOrNull() ?: emptyList()
+                _uiState.update { it.copy(publicPins = allPins.filter { pin -> pin.userId == userId && !pin.isPrivate }) }
+
+                val userBoards = getUserBoardsUseCase(userId).getOrNull() ?: emptyList()
+                _uiState.update { it.copy(publicBoards = userBoards.filter { board -> !board.isPrivate }, isLoading = false) }
+
+            } catch (e: Exception) {
+                val errorReal = e.message ?: e.localizedMessage ?: e.javaClass.simpleName
+                Log.e("PERFIL_PUBLICO", "Crash al cargar: $errorReal", e)
+                _uiState.update { it.copy(isLoading = false, error = errorReal) }
+            }
+        }
+    }
+
+    fun toggleFollow() {
+        viewModelScope.launch {
+            val currentProfile = _uiState.value.profile ?: return@launch
+            val currentlyFollowing = _uiState.value.isFollowing
+            val userId = currentProfile.id
+
+            // 👇 LÓGICA OPTIMISTA: Sumamos o restamos 1 al instante
+            val newFollowersCount = if (currentlyFollowing) currentProfile.followersCount - 1 else currentProfile.followersCount + 1
+            val updatedProfile = currentProfile.copy(followersCount = newFollowersCount)
+
+            _uiState.update { it.copy(isFollowing = !currentlyFollowing, profile = updatedProfile) }
+
+            toggleFollowUseCase.execute(userId, currentlyFollowing).onFailure {
+                // Si falla el internet, lo regresamos a como estaba
+                _uiState.update { it.copy(isFollowing = currentlyFollowing, profile = currentProfile) }
+            }
+        }
+    }
+}

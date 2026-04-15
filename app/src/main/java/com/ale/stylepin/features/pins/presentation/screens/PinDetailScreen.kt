@@ -1,0 +1,452 @@
+package com.ale.stylepin.features.pins.presentation.screens
+
+import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.ale.stylepin.features.pins.presentation.viewmodels.PinsViewModel
+
+@Composable
+fun PinStatBadge(icon: ImageVector, value: String, label: String, tint: Color = Color.Gray) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(text = value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PinDetailScreen(
+    pinId: String,
+    viewModel: PinsViewModel,
+    onBack: () -> Unit,
+    onNavigateToEditPin: (com.ale.stylepin.features.pins.domain.entities.Pin) -> Unit,
+    onNavigateToUserProfile: (String) -> Unit = {}
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var newBoardName by remember { mutableStateOf("") }
+
+    LaunchedEffect(pinId) { viewModel.loadPinById(pinId) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("¿Eliminar Pin?") },
+            text = { Text("Esta acción eliminará el outfit permanentemente.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deletePin(pinId)
+                    showDeleteDialog = false
+                    onBack()
+                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    if (uiState.isSaveSheetVisible) {
+        ModalBottomSheet(onDismissRequest = { viewModel.hideSaveDialog() }) {
+            Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                Text(
+                    "Guardar en tablero",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = newBoardName,
+                        onValueChange = { newBoardName = it },
+                        placeholder = { Text("Crear tablero nuevo...") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = CircleShape
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    IconButton(
+                        onClick = {
+                            viewModel.createBoardAndSavePin(newBoardName)
+                            newBoardName = ""
+                        },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.primary, CircleShape)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Crear", tint = Color.White)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+                    items(uiState.myBoards) { board ->
+                        ListItem(
+                            headlineContent = { Text(board.name, fontWeight = FontWeight.Medium) },
+                            trailingContent = {
+                                Button(
+                                    onClick = { viewModel.savePinToBoard(board.id) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                                ) { Text("Guardar") }
+                            },
+                            modifier = Modifier.clickable { viewModel.savePinToBoard(board.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {},
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.background(Color.White.copy(alpha = 0.5f), CircleShape)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    val isOwner =
+                        uiState.currentUserId != null && uiState.pinDetail?.userId == uiState.currentUserId
+                    if (isOwner) {
+                        IconButton(
+                            onClick = { uiState.pinDetail?.let(onNavigateToEditPin) },
+                            modifier = Modifier.background(Color.White.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(
+                            onClick = { showDeleteDialog = true },
+                            modifier = Modifier.background(Color.White.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red)
+                        }
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
+                Row(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = uiState.commentInput,
+                        onValueChange = { viewModel.onCommentInputChanged(it) },
+                        placeholder = { Text("Añade un comentario...") },
+                        modifier = Modifier.weight(1f),
+                        shape = CircleShape
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    IconButton(
+                        onClick = { viewModel.postComment() },
+                        enabled = uiState.commentInput.isNotBlank()
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Enviar",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            if (uiState.isLoadingDetail) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else if (uiState.pinDetail != null) {
+                val pin = uiState.pinDetail!!
+
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    // Imagen principal
+                    item {
+                        AsyncImage(
+                            model = pin.imageUrl,
+                            contentDescription = pin.title,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 300.dp, max = 500.dp)
+                                .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    // Acciones: Like, Compartir, Guardar
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // Like
+                                IconButton(onClick = { viewModel.toggleLike(pinId) }) {
+                                    Icon(
+                                        imageVector = if (pin.isLikedByMe) Icons.Default.Favorite
+                                        else Icons.Default.FavoriteBorder,
+                                        contentDescription = "Like",
+                                        tint = if (pin.isLikedByMe) Color.Red
+                                        else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                // Compartir — FUNCIONAL: abre el selector de apps del sistema
+                                IconButton(onClick = {
+                                    val shareText = buildString {
+                                        append("¡Mira este outfit en StylePin!\n")
+                                        append("${pin.title}\n")
+                                        if (!pin.description.isNullOrBlank()) {
+                                            append("${pin.description}\n")
+                                        }
+                                        if (!pin.purchaseLink.isNullOrBlank()) {
+                                            append("Comprar: ${pin.purchaseLink}")
+                                        }
+                                    }
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, shareText)
+                                    }
+                                    context.startActivity(
+                                        Intent.createChooser(intent, "Compartir pin")
+                                    )
+                                }) {
+                                    Icon(
+                                        Icons.Default.Share,
+                                        contentDescription = "Compartir",
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                            // Guardar
+                            Button(
+                                onClick = { viewModel.showSaveDialog() },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (pin.isSavedByMe) Color.Gray else Color.Red
+                                ),
+                                shape = CircleShape
+                            ) {
+                                Text(
+                                    if (pin.isSavedByMe) "Guardado" else "Guardar",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    // Título y descripción
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            Text(
+                                pin.title,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (!pin.description.isNullOrBlank()) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(pin.description, style = MaterialTheme.typography.bodyLarge)
+                            }
+                            Spacer(Modifier.height(16.dp))
+                        }
+                    }
+
+                    // Estadísticas
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            PinStatBadge(
+                                icon = Icons.Outlined.Visibility,
+                                value = "${pin.viewsCount}",
+                                label = "Vistas"
+                            )
+                            PinStatBadge(
+                                icon = if (pin.isLikedByMe) Icons.Default.Favorite
+                                else Icons.Default.FavoriteBorder,
+                                value = "${pin.likesCount}",
+                                label = "Likes",
+                                tint = if (pin.isLikedByMe) Color.Red else Color.Gray
+                            )
+                            PinStatBadge(
+                                icon = Icons.Outlined.ChatBubbleOutline,
+                                value = "${pin.commentsCount}",
+                                label = "Comentarios"
+                            )
+                            PinStatBadge(
+                                icon = if (pin.isSavedByMe) Icons.Default.Bookmark
+                                else Icons.Outlined.BookmarkBorder,
+                                value = "${pin.savesCount}",
+                                label = "Guardados",
+                                tint = if (pin.isSavedByMe) MaterialTheme.colorScheme.primary
+                                else Color.Gray
+                            )
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+
+                    // Autor del pin — CORRECCIÓN: muestra nombre real o username
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onNavigateToUserProfile(pin.userId) }
+                            ) {
+                                // CORRECCIÓN: si userFullName viene vacío se usa username
+                                val authorName =
+                                    pin.userFullName.takeIf { it.isNotBlank() } ?: pin.username
+                                val fallbackUrl =
+                                    "https://ui-avatars.com/api/?name=${authorName.replace(" ", "+")}&background=random"
+                                AsyncImage(
+                                    model = pin.userAvatarUrl?.takeIf { it.isNotBlank() }
+                                        ?: fallbackUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        authorName,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Text(
+                                        "@${pin.username}",
+                                        color = Color.Gray,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                            if (pin.userId != uiState.currentUserId) {
+                                Button(
+                                    onClick = { viewModel.toggleFollowAuthor() },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (uiState.authorIsFollowed) Color.Black
+                                        else MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = if (uiState.authorIsFollowed) Color.White
+                                        else MaterialTheme.colorScheme.onSurface
+                                    )
+                                ) {
+                                    Text(
+                                        if (uiState.authorIsFollowed) "Siguiendo" else "Seguir",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Sección de comentarios
+                    item {
+                        Text(
+                            "Comentarios (${uiState.comments.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    if (uiState.comments.isEmpty()) {
+                        item {
+                            Text(
+                                "Aún no hay comentarios. ¡Sé el primero!",
+                                color = Color.Gray,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    } else {
+                        items(uiState.comments) { comment ->
+                            Row(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                                    .fillMaxWidth()
+                            ) {
+                                // CORRECCIÓN: si userFullName viene vacío se usa username
+                                val commentAuthorName =
+                                    comment.userFullName.takeIf { it.isNotBlank() } ?: comment.username
+                                val fallbackUrl =
+                                    "https://ui-avatars.com/api/?name=${commentAuthorName.replace(" ", "+")}"
+                                AsyncImage(
+                                    model = comment.userAvatarUrl.takeIf { it.isNotBlank() }
+                                        ?: fallbackUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(36.dp).clip(CircleShape)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            commentAuthorName,
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            comment.createdAt.take(10),
+                                            color = Color.Gray,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        comment.text,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item { Spacer(Modifier.height(100.dp)) }
+                }
+            }
+        }
+    }
+}

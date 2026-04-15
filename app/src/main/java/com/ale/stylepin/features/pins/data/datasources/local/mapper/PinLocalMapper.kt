@@ -1,0 +1,100 @@
+package com.ale.stylepin.features.pins.data.datasources.local.mapper
+
+import com.ale.stylepin.features.pins.data.datasources.remote.model.PinDto
+import com.ale.stylepin.features.pins.data.datasources.local.entities.PinEntity
+import com.ale.stylepin.features.pins.domain.entities.Pin
+
+fun PinDto.toEntity(): PinEntity = PinEntity(
+    id = id ?: "",
+    userId = user_id ?: "",
+    username = user_username?.takeIf { it.isNotBlank() } ?: "usuario",
+    userFullName = user_full_name?.takeIf { it.isNotBlank() }
+        ?: user_username?.takeIf { it.isNotBlank() }
+        ?: "Usuario Anónimo",
+    userAvatarUrl = user_avatar_url,
+    userIsVerified = user_is_verified ?: false,
+    imageUrl = image_url ?: "",
+    title = title ?: "",
+    description = description,
+    category = category ?: "outfit_completo",
+    styles = styles ?: emptyList(),
+    occasions = occasions ?: emptyList(),
+    season = season ?: "todo_el_ano",
+    brands = brands ?: emptyList(),
+    priceRange = price_range ?: "bajo_500",
+    whereToBuy = where_to_buy,
+    purchaseLink = purchase_link,
+    likesCount = likes_count ?: 0,
+    savesCount = saves_count ?: 0,
+    commentsCount = comments_count ?: 0,
+    viewsCount = views_count ?: 0,
+    colors = colors ?: emptyList(),
+    tags = tags ?: emptyList(),
+    isPrivate = is_private ?: false,
+    createdAt = created_at ?: "",
+    updatedAt = updated_at ?: "",
+    isLikedByMe = is_liked_by_me ?: false,
+    isSavedByMe = is_saved_by_me ?: false
+)
+
+fun PinEntity.toDomain(): Pin = Pin(
+    id = id,
+    userId = userId,
+    username = username,
+    userFullName = userFullName,
+    userAvatarUrl = userAvatarUrl ?: "",
+    userIsVerified = userIsVerified,
+    imageUrl = imageUrl,
+    title = title,
+    description = description,
+    category = category,
+    styles = styles,
+    occasions = occasions,
+    season = season,
+    brands = brands,
+    priceRange = priceRange,
+    whereToBuy = whereToBuy,
+    purchaseLink = purchaseLink,
+    likesCount = likesCount,
+    savesCount = savesCount,
+    commentsCount = commentsCount,
+    viewsCount = viewsCount,
+    colors = colors,
+    tags = tags,
+    isPrivate = isPrivate,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+    isLikedByMe = isLikedByMe,
+    isSavedByMe = isSavedByMe
+)
+
+fun Pin.toEntity(): PinEntity = PinEntity(
+    id = id,
+    userId = userId,
+    username = username,
+    userFullName = userFullName,
+    userAvatarUrl = userAvatarUrl,
+    userIsVerified = userIsVerified,
+    imageUrl = imageUrl,
+    title = title,
+    description = description,
+    category = category,
+    styles = styles,
+    occasions = occasions,
+    season = season,
+    brands = brands,
+    priceRange = priceRange,
+    whereToBuy = whereToBuy,
+    purchaseLink = purchaseLink,
+    likesCount = likesCount,
+    savesCount = savesCount,
+    commentsCount = commentsCount,
+    viewsCount = viewsCount,
+    colors = colors,
+    tags = tags,
+    isPrivate = isPrivate,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+    isLikedByMe = isLikedByMe,
+    isSavedByMe = isSavedByMe
+)

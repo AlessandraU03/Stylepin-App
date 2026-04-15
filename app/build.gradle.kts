@@ -6,6 +6,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.secrets.gradle)
     alias(libs.plugins.jetbrainsKotlinSerialization)
+    // Activa Hilt y KSP
+    alias(libs.plugins.devtools.ksp)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -37,24 +41,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
-        }
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
         resValues = true
     }
-
-    secrets {
-        propertiesFileName = "local.properties"
-        defaultPropertiesFileName = "local.defaults.properties"
-        ignoreList.add("sdk.dir")
-    }
-
 
     flavorDimensions.add("environment")
     productFlavors {
@@ -72,6 +63,18 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_21)
+    }
+}
+
+secrets {
+    propertiesFileName = "local.properties"
+    defaultPropertiesFileName = "local.defaults.properties"
+    ignoreList.add("sdk.dir")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -81,17 +84,43 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.ui.text.google.fonts)
-    implementation(libs.androidx.material3)
-    implementation("androidx.compose.material:material:1.7.0-beta01")
-    implementation(libs.androidx.lifecycle.viewmodel.compose)   //viewModel()
-    implementation(libs.com.squareup.retrofit2.retrofit)        // Retrofit
-    implementation(libs.com.squareup.retrofit2.converter.json)  // JSON
-    implementation(libs.io.coil.kt.coil.compose)
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.navigation.compose)                // IO
-    implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.compose.runtime)   // Icons
+    implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.compose.runtime.livedata)
+
+    implementation(libs.androidx.compose.ui.text.google.fonts)      // G Fonts
+    implementation(libs.androidx.lifecycle.viewmodel.compose)       // viewModel()
+    implementation(libs.com.squareup.retrofit2.retrofit)            // Retrofit
+    implementation(libs.com.squareup.retrofit2.converter.json)      // JSON
+    implementation(libs.io.coil.kt.coil.compose)                    // Coil
+    implementation(libs.androidx.navigation.compose)                // Navigation
+    implementation(libs.androidx.compose.material.icons.extended)   // Icons extendend
+    // Hilt
+    implementation(libs.hilt.android)
+    implementation(libs.hilt.navigation.compose)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.common)
+    implementation(libs.androidx.hilt.work)                    // Integración con Jetpack Compose
+    ksp(libs.hilt.compiler)
+    ksp(libs.androidx.hilt.compiler)
+
+    implementation(libs.firebase.messaging)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    // Serialization
+    implementation(libs.kotlinx.serialization.json)
+
+    // Biometric & Camera
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.camera.extensions)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
